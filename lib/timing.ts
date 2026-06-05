@@ -157,7 +157,7 @@ export interface RestStat {
 export function restByExercise(logs: ExerciseLog[], machines: Machine[]): RestStat[] {
   const byMachine = new Map<string, number[]>();
   for (const l of logs) {
-    if (!l.restsSec || l.restsSec.length === 0) continue;
+    if (!l.machineId || !l.restsSec || l.restsSec.length === 0) continue;
     const arr = byMachine.get(l.machineId) ?? byMachine.set(l.machineId, []).get(l.machineId)!;
     arr.push(...l.restsSec);
   }
@@ -197,7 +197,8 @@ function repDrop(l: ExerciseLog): number {
 }
 
 /** Per-machine pace baseline from prior logged sessions (needs 2+ timed logs). */
-export function paceBaseline(logs: ExerciseLog[], machineId: string, excludeLogId?: string): PaceBaseline | null {
+export function paceBaseline(logs: ExerciseLog[], machineId: string | undefined, excludeLogId?: string): PaceBaseline | null {
+  if (!machineId) return null;
   const ls = logs.filter((l) => l.machineId === machineId && l.timing && l.id !== excludeLogId);
   if (ls.length < 2) return null;
   const n = ls.length;
@@ -281,7 +282,7 @@ export function paceSummaries(logs: ExerciseLog[], machines: Machine[]): PaceSum
 export function restInsights(logs: ExerciseLog[], machines: Machine[]): string[] {
   const byMachine = new Map<string, ExerciseLog[]>();
   for (const l of logs) {
-    if (!l.restsSec || l.restsSec.length === 0) continue;
+    if (!l.machineId || !l.restsSec || l.restsSec.length === 0) continue;
     const working = l.sets.filter((r) => r > 0);
     if (working.length < 2) continue;
     const arr = byMachine.get(l.machineId) ?? byMachine.set(l.machineId, []).get(l.machineId)!;

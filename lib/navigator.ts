@@ -44,7 +44,7 @@ export interface NavPlan {
 
 function usedTodayIds(data: AppData): Set<string> {
   const date = todayISO();
-  return new Set(data.logs.filter((l) => l.date === date).map((l) => l.machineId));
+  return new Set(data.logs.filter((l) => l.date === date).map((l) => l.machineId).filter((id): id is string => !!id));
 }
 
 /** Walk today's template, marking slots done (from logs) or skipped. */

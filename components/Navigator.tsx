@@ -1,15 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SwitchReason, WorkoutGoal } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { buildPlan, slotMachines, slotSubstitutes } from "@/lib/navigator";
-import { findMachine } from "@/lib/catalog";
+import { findMachine, isMultiExercise } from "@/lib/catalog";
 import { downscaleImage } from "@/lib/photos";
 import { GOAL_ICON, GOAL_LABEL, CATEGORY_LABEL } from "@/lib/movement";
 import { smartSuggestion, explainPick, nowCtx, type PickExplanation } from "@/lib/prediction";
 import MachineCard from "./MachineCard";
 import ExerciseLogger from "./ExerciseLogger";
+import ExerciseChooser from "./ExerciseChooser";
 import WorkoutSummary from "./WorkoutSummary";
 
 const GOAL_BAR: Record<WorkoutGoal, string> = {
@@ -26,8 +27,15 @@ export default function Navigator({ showToast }: { showToast: (m: string) => voi
   const { data, toggleBusy, recordSwitch, pickMachine, setActiveMachine, skipSlot, clearGoal, endWorkout, setGymPhoto } = useStore();
   const [showSubs, setShowSubs] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoTarget = useRef<string | null>(null);
+
+  // Reset the exercise pick whenever the active machine changes (or clears).
+  useEffect(() => {
+    setPicked(null);
+  }, [data.today?.activeMachineId]);
+
   const plan = buildPlan(data);
   if (!plan) return null;
 
@@ -176,7 +184,11 @@ export default function Navigator({ showToast }: { showToast: (m: string) => voi
       ) : null}
 
       {active && goal ? (
-        <ExerciseLogger key={active.id} machine={active} goal={goal} onClose={() => setActiveMachine(undefined)} onLeave={leave} showToast={showToast} />
+        isMultiExercise(active) && !picked ? (
+          <ExerciseChooser machine={active} onPick={setPicked} onClose={() => setActiveMachine(undefined)} />
+        ) : (
+          <ExerciseLogger key={`${active.id}-${picked?.id ?? "solo"}`} machine={active} exercise={picked ?? undefined} goal={goal} onClose={() => setActiveMachine(undefined)} onLeave={leave} showToast={showToast} />
+        )
       ) : null}
 
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhotoFile(f); e.target.value = ""; }} />

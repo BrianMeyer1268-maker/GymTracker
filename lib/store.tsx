@@ -300,11 +300,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setData((d) => {
           const now = Date.now();
           const entry: ExerciseLog = { ...log, id: uid(), date: todayISO(), loggedAt: now, sessionId: d.today?.sessionId };
-          const flagged =
-            log.pain === "none"
-              ? d.flagged.filter((x) => x !== log.machineId)
-              : log.pain === "significant" && !d.flagged.includes(log.machineId)
-                ? [...d.flagged, log.machineId]
+          const mid = log.machineId;
+          const flagged = !mid
+            ? d.flagged
+            : log.pain === "none"
+              ? d.flagged.filter((x) => x !== mid)
+              : log.pain === "significant" && !d.flagged.includes(mid)
+                ? [...d.flagged, mid]
                 : d.flagged;
           return {
             ...d,

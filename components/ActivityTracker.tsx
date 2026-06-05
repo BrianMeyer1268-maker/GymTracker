@@ -1,14 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import type { ActivityType, ActivityIntensity, SorenessLevel } from "@/lib/types";
+import type { ActivityType, ActivityIntensity, SorenessLevel, WorkoutGoal, MovementCategory } from "@/lib/types";
 import { ACTIVITY_INTENSITIES, SORENESS_LEVELS } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { trackerFor, ACTIVITY_LABEL, ACTIVITY_ICON, COMBAT_FOCUS, CARDIO_SUBTYPES, RECOVERY_FOCUS } from "@/lib/gyms";
-import { exerciseById, exerciseName, EXERCISE_GROUPS, MOVEMENT_TAG_LABEL } from "@/lib/exercises";
+import { exerciseById, exerciseName, EXERCISE_GROUPS, MOVEMENT_TAG_LABEL, type MovementTag } from "@/lib/exercises";
+import { progressionKey } from "@/lib/progression";
 import { relDate } from "@/lib/date";
 import Segmented from "./Segmented";
 import ExercisePicker from "./ExercisePicker";
+
+const MOVEMENT_GOAL: Record<MovementTag, WorkoutGoal> = { push: "push", pull: "pull", legs: "legs", hinge: "legs", core: "full-body", carry: "full-body" };
+const MOVEMENT_CATEGORY: Record<MovementTag, MovementCategory> = { push: "horizontal-push", pull: "horizontal-pull", legs: "squat", hinge: "hinge", core: "core", carry: "core" };
+function parseRepList(text: string): number[] {
+  return text.split(/[^\d]+/).map((s) => parseInt(s, 10)).filter((n) => n > 0 && n < 100);
+}
 
 function Chips({ options, value, onToggle }: { options: string[]; value: string[]; onToggle: (v: string) => void }) {
   return (
@@ -42,8 +49,9 @@ const inputCls = "min-h-[44px] w-full rounded-xl border border-line bg-surface2 
 const lbl = "mb-1.5 block text-sm font-bold";
 
 export default function ActivityTracker({ activity, showToast }: { activity: ActivityType; showToast: (m: string) => void }) {
-  const { data, logActivity, deleteActivityLog } = useStore();
+  const { data, logActivity, saveExercise, deleteActivityLog } = useStore();
   const tracker = trackerFor(activity);
+  const perExercise = tracker === "free-weight" || tracker === "bodyweight";
 
   const [duration, setDuration] = useState("");
   const [intensity, setIntensity] = useState<ActivityIntensity | undefined>(tracker === "recovery" ? "easy" : undefined);
@@ -60,6 +68,7 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
   const [skillFocus, setSkillFocus] = useState("");
   const [focuses, setFocuses] = useState<string[]>([]);
   const [exercises, setExercises] = useState<string[]>([]);
+  const [exLogs, setExLogs] = useState<Record<string, { weight: string; reps: string }>>({});
 
   const tog = (setter: (f: (p: string[]) => string[]) => void) => (v: string) => setter((p) => (p.includes(v) ? p.filter((x) => x !== v) : [...p, v]));
 
@@ -79,6 +88,7 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
     setSkillFocus("");
     setFocuses([]);
     setExercises([]);
+    setExLogs({});
   }
 
   function save() {
@@ -86,6 +96,30 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
     const defs = exercises.map((id) => exerciseById(id)).filter((d): d is NonNullable<typeof d> => !!d);
     const movements = Array.from(new Set(defs.map((d) => MOVEMENT_TAG_LABEL[d.movement])));
     const equipment = Array.from(new Set(defs.map((d) => EXERCISE_GROUPS.find((g) => g.id === d.group)?.name).filter((x): x is string => !!x)));
+
+    // Per-exercise progression logs (each exercise keeps its own weight/reps history).
+    if (perExercise) {
+      for (const d of defs) {
+        const v = exLogs[d.id];
+        if (!v) continue;
+        const reps = parseRepList(v.reps);
+        const weight = Number(v.weight) || 0;
+        if (!reps.length && !weight) continue;
+        saveExercise({
+          category: MOVEMENT_CATEGORY[d.movement],
+          goal: MOVEMENT_GOAL[d.movement],
+          weight,
+          sets: reps,
+          difficulty: "right",
+          pain: "none",
+          exerciseId: d.id,
+          exerciseName: d.name,
+          equipmentGroup: d.group,
+          progressionKey: progressionKey({ equipmentGroup: d.group, exerciseId: d.id }),
+        });
+      }
+    }
+
     logActivity({
       activity,
       tracker,
@@ -137,6 +171,27 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
       ) : null}
       {tracker === "bodyweight" ? (
         <div><span className={lbl}>Exercises</span><ExercisePicker groups={["bodyweight", "band"]} value={exercises} onChange={setExercises} /></div>
+      ) : null}
+
+      {/* Per-exercise sets — each builds its own progression history */}
+      {perExercise && exercises.length ? (
+        <div>
+          <span className={lbl}>Log sets per exercise <span className="font-medium text-faint">(optional · own progression)</span></span>
+          <div className="flex flex-col gap-2">
+            {exercises.map((id) => {
+              const v = exLogs[id] ?? { weight: "", reps: "" };
+              const setV = (patch: Partial<{ weight: string; reps: string }>) => setExLogs((p) => ({ ...p, [id]: { ...v, ...patch } }));
+              return (
+                <div key={id} className="flex items-center gap-2 rounded-xl border border-line bg-surface2 px-2.5 py-2">
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{exerciseName(id)}</span>
+                  <input className="w-14 rounded-lg border border-line bg-surface px-2 py-1.5 text-center text-sm focus:outline-none focus:ring-2 focus:ring-accent" inputMode="numeric" placeholder="lb" value={v.weight} onChange={(e) => setV({ weight: e.target.value })} />
+                  <span className="text-faint">×</span>
+                  <input className="w-20 rounded-lg border border-line bg-surface px-2 py-1.5 text-center text-sm focus:outline-none focus:ring-2 focus:ring-accent" inputMode="numeric" placeholder="10/10/8" value={v.reps} onChange={(e) => setV({ reps: e.target.value })} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : null}
 
       {/* recovery focus */}

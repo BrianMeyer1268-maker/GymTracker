@@ -1,6 +1,7 @@
 import type { ExerciseLog, Machine, Readiness, WorkoutGoal } from "./types";
 import { LIFTING_GOALS } from "./types";
 import { findMachine } from "./catalog";
+import { keyForLog } from "./progression";
 import { daysAgo } from "./date";
 
 export type StrengthDirection = "up" | "flat" | "down";
@@ -13,6 +14,16 @@ export function logsForMachine(logs: ExerciseLog[], machineId: string): Exercise
 
 export function lastLogFor(logs: ExerciseLog[], machineId: string): ExerciseLog | undefined {
   const l = logsForMachine(logs, machineId);
+  return l[l.length - 1];
+}
+
+/** Logs sharing a progression key (exercise-specific on multi-use equipment). */
+export function logsForKey(logs: ExerciseLog[], key: string): ExerciseLog[] {
+  return logs.filter((l) => keyForLog(l) === key).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+export function lastLogForKey(logs: ExerciseLog[], key: string): ExerciseLog | undefined {
+  const l = logsForKey(logs, key);
   return l[l.length - 1];
 }
 
@@ -33,34 +44,57 @@ export function sessionScore(machine: Machine, log: ExerciseLog): number {
   return log.weight * (1 + best / 30); // est top-set 1RM
 }
 
+/** Like sessionScore but tolerates a missing machine (free-weight / bodyweight logs). */
+function scoreLog(machine: Machine | undefined, log: ExerciseLog): number {
+  const best = bestReps(log.sets);
+  if (machine?.inverted) return best - log.weight;
+  if (machine && (machine.progression === "cardio" || machine.progression === "bodyweight")) return best || log.weight;
+  return log.weight * (1 + best / 30);
+}
+
+export type TrendStatus = "improving" | "stable" | "declining" | "new";
+
+/** One progression line per exercise (keyed by progressionKey, not just the machine). */
 export interface TrendItem {
-  machine: Machine;
+  key: string;
+  label: string;
+  machine?: Machine;
   last: ExerciseLog;
-  prev: ExerciseLog;
-  improving: boolean;
+  prev?: ExerciseLog;
+  status: TrendStatus;
 }
 
 export function exerciseTrends(logs: ExerciseLog[], machines: Machine[]): TrendItem[] {
-  const ids = Array.from(new Set(logs.map((l) => l.machineId)));
+  const keys = Array.from(new Set(logs.map(keyForLog).filter(Boolean)));
   const out: TrendItem[] = [];
-  for (const id of ids) {
-    const machine = findMachine(machines, id);
-    if (!machine) continue;
-    const sessions = logsForMachine(logs, id);
-    if (sessions.length < 2) continue;
+  for (const key of keys) {
+    const sessions = logsForKey(logs, key);
+    if (!sessions.length) continue;
     const last = sessions[sessions.length - 1];
+    const machine = last.machineId ? findMachine(machines, last.machineId) : undefined;
+    const label = last.exerciseName || machine?.name || key;
+    if (sessions.length < 2) {
+      out.push({ key, label, machine, last, status: "new" });
+      continue;
+    }
     const prev = sessions[sessions.length - 2];
-    out.push({ machine, last, prev, improving: sessionScore(machine, last) > sessionScore(machine, prev) });
+    const s1 = scoreLog(machine, last);
+    const s0 = scoreLog(machine, prev);
+    out.push({ key, label, machine, last, prev, status: s1 > s0 ? "improving" : s1 < s0 ? "declining" : "stable" });
   }
   return out;
 }
 
 export function improvingExercises(logs: ExerciseLog[], machines: Machine[]): TrendItem[] {
-  return exerciseTrends(logs, machines).filter((t) => t.improving);
+  return exerciseTrends(logs, machines).filter((t) => t.status === "improving");
 }
 
 export function stalledExercises(logs: ExerciseLog[], machines: Machine[]): TrendItem[] {
-  return exerciseTrends(logs, machines).filter((t) => !t.improving);
+  return exerciseTrends(logs, machines).filter((t) => t.status === "stable" || t.status === "declining");
+}
+
+export function newBaselineExercises(logs: ExerciseLog[], machines: Machine[]): TrendItem[] {
+  return exerciseTrends(logs, machines).filter((t) => t.status === "new");
 }
 
 export function lastWorkoutByGoal(logs: ExerciseLog[]): Record<WorkoutGoal, string | undefined> {
@@ -90,10 +124,10 @@ export function totalSessions(logs: ExerciseLog[]): number {
 }
 
 export function overallStrength(logs: ExerciseLog[], machines: Machine[]): StrengthDirection {
-  const t = exerciseTrends(logs, machines);
+  const t = exerciseTrends(logs, machines).filter((x) => x.status !== "new");
   if (t.length === 0) return "flat";
-  const up = t.filter((x) => x.improving).length;
-  const down = t.length - up;
+  const up = t.filter((x) => x.status === "improving").length;
+  const down = t.filter((x) => x.status === "declining").length;
   if (up > down) return "up";
   if (down > up) return "down";
   return "flat";

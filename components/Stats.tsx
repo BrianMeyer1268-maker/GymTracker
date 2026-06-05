@@ -6,6 +6,7 @@ import { useStore } from "@/lib/store";
 import {
   improvingExercises,
   stalledExercises,
+  newBaselineExercises,
   weeklyCount,
   lastWorkoutDate,
   suggestGoal,
@@ -29,6 +30,7 @@ function last7(dates: Set<string>): boolean[] {
 }
 
 function change(t: TrendItem): string {
+  if (!t.prev) return "new";
   const dw = t.last.weight - t.prev.weight;
   if (dw !== 0) return `${dw > 0 ? "+" : ""}${Math.round(dw * 10) / 10} lb`;
   const dr = bestReps(t.last.sets) - bestReps(t.prev.sets);
@@ -43,6 +45,7 @@ export default function Stats({ onStartGoal, showToast }: { onStartGoal: (g: Wor
   const latest = sortedBodyComp(data.bodyComp).slice(-1)[0];
   const improving = improvingExercises(data.logs, data.machines);
   const stalled = stalledExercises(data.logs, data.machines);
+  const fresh = newBaselineExercises(data.logs, data.machines);
   const week = weeklyCount(data.logs);
   const lastWk = lastWorkoutDate(data.logs);
   const next = suggestGoal(data.logs, undefined);
@@ -121,8 +124,8 @@ export default function Stats({ onStartGoal, showToast }: { onStartGoal: (g: Wor
           <div className="py-3 text-center text-sm text-faint">Log a movement twice to see progress.</div>
         ) : (
           improving.map((t) => (
-            <div key={t.machine.id} className="flex items-center gap-2 border-b border-line/60 py-2.5 last:border-0">
-              <span className="flex-1 text-sm font-semibold">{t.machine.name}</span>
+            <div key={t.key} className="flex items-center gap-2 border-b border-line/60 py-2.5 last:border-0">
+              <span className="flex-1 text-sm font-semibold">{t.label}</span>
               <span className="text-xs tabular-nums text-faint">{t.last.weight} · {bestReps(t.last.sets)}r</span>
               <span className="text-xs font-bold tabular-nums text-good">▲ {change(t)}</span>
             </div>
@@ -137,14 +140,28 @@ export default function Stats({ onStartGoal, showToast }: { onStartGoal: (g: Wor
           <div className="py-3 text-center text-sm text-faint">Nothing stalled. Keep it up.</div>
         ) : (
           stalled.map((t) => (
-            <div key={t.machine.id} className="flex items-center gap-2 border-b border-line/60 py-2.5 last:border-0">
-              <span className="flex-1 text-sm font-semibold">{t.machine.name}</span>
+            <div key={t.key} className="flex items-center gap-2 border-b border-line/60 py-2.5 last:border-0">
+              <span className="flex-1 text-sm font-semibold">{t.label}</span>
               <span className="text-xs tabular-nums text-faint">{t.last.weight} · {bestReps(t.last.sets)}r</span>
               <span className="text-xs font-bold tabular-nums text-faint">■ {change(t)}</span>
             </div>
           ))
         )}
       </div>
+
+      {/* New baselines */}
+      {fresh.length ? (
+        <div className="card p-4">
+          <div className="mb-1 text-sm font-bold">🆕 New baseline</div>
+          {fresh.map((t) => (
+            <div key={t.key} className="flex items-center gap-2 border-b border-line/60 py-2.5 last:border-0">
+              <span className="flex-1 text-sm font-semibold">{t.label}</span>
+              <span className="text-xs tabular-nums text-faint">{t.last.weight} · {bestReps(t.last.sets)}r</span>
+              <span className="text-xs font-bold tabular-nums text-accent">new</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {/* Backup */}
       <div className="card p-4">

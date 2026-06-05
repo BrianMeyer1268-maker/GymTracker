@@ -112,7 +112,8 @@ export interface LogTiming {
 export interface ExerciseLog {
   id: string;
   date: string; // YYYY-MM-DD (local)
-  machineId: string;
+  /** The machine/station used (optional — free-weight/bodyweight logs have none). */
+  machineId?: string;
   category: MovementCategory;
   goal: WorkoutGoal;
   weight: number;
@@ -124,6 +125,17 @@ export interface ExerciseLog {
   restsSec?: number[];
   timing?: LogTiming;
   sessionId?: string;
+  // ---- Exercise-specific identity (progression is keyed by the exercise, not just the equipment) ----
+  exerciseId?: string;
+  exerciseName?: string;
+  /** Equipment group for free weights / bodyweight (e.g. "dumbbell", "kettlebell"). */
+  equipmentGroup?: string;
+  equipmentId?: string;
+  /** Grouping key for progression history. See lib/progression.ts `progressionKey`. */
+  progressionKey?: string;
+  notes?: string;
+  /** Pre-exercise-identity log, keyed by machine alone. */
+  legacy?: boolean;
 }
 
 /** One workout session — timing + crowd intelligence. */

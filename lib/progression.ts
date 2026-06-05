@@ -2,6 +2,25 @@ import type { ExerciseLog, Machine, Phase, ProgressionRule } from "./types";
 
 export type Tone = "up" | "hold" | "down" | "neutral";
 
+/**
+ * The key a log's progression history is grouped under:
+ *  - `machineId + exerciseId` for a multi-exercise station (cable / functional trainer)
+ *  - `equipmentGroup + exerciseId` for free weights / bodyweight / kettlebells / bands
+ *  - `machineId` alone for a single-purpose machine (chest press, leg press)
+ */
+export function progressionKey(opts: { machineId?: string; exerciseId?: string; equipmentGroup?: string; multiExercise?: boolean }): string {
+  const { machineId, exerciseId, equipmentGroup, multiExercise } = opts;
+  if (machineId && exerciseId && multiExercise) return `${machineId}+${exerciseId}`;
+  if (equipmentGroup && exerciseId) return `${equipmentGroup}+${exerciseId}`;
+  if (machineId) return machineId;
+  return exerciseId ?? "";
+}
+
+/** The progression key for an existing log — falls back to machineId for legacy logs. */
+export function keyForLog(log: ExerciseLog): string {
+  return log.progressionKey || log.machineId || log.exerciseId || "";
+}
+
 export interface Recommendation {
   action: "increase" | "maintain" | "repeat" | "reduce" | "start";
   suggestedWeight: number | null;

@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import type { Difficulty, LogTiming, Machine, Pain, SwitchReason, WorkoutGoal } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import { lastLogFor } from "@/lib/analytics";
-import { recommend } from "@/lib/progression";
+import { lastLogForKey } from "@/lib/analytics";
+import { recommend, progressionKey } from "@/lib/progression";
+import { isMultiExercise } from "@/lib/catalog";
 import { EQUIPMENT_LABEL } from "@/lib/movement";
 import { restDefaultFor, paceBaseline } from "@/lib/timing";
 import { relDate } from "@/lib/date";
@@ -35,19 +36,22 @@ function parseReps(text: string): number[] {
 
 export default function ExerciseLogger({
   machine,
+  exercise,
   goal,
   onClose,
   onLeave,
   showToast,
 }: {
   machine: Machine;
+  exercise?: { id: string; name: string };
   goal: WorkoutGoal;
   onClose: () => void;
   onLeave: (reason: SwitchReason) => void;
   showToast: (m: string) => void;
 }) {
   const { data, saveExercise, setGymPhoto } = useStore();
-  const last = lastLogFor(data.logs, machine.id);
+  const pkey = progressionKey({ machineId: machine.id, exerciseId: exercise?.id, multiExercise: isMultiExercise(machine) });
+  const last = lastLogForKey(data.logs, pkey);
   const rec = recommend(machine, last, data.phase, data.flagged.includes(machine.id));
   const baseline = paceBaseline(data.logs, machine.id);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -116,8 +120,8 @@ export default function ExerciseLogger({
       avgRestSec: rests.length ? Math.round(restTotalSec / rests.length) : 0,
       timePerSetMs: setCount ? Math.round(activeMs / setCount) : 0,
     };
-    saveExercise({ machineId: machine.id, category: machine.category, goal, weight, sets: isCardio ? [] : clean, difficulty, pain, restsSec: rests.length ? rests : undefined, timing });
-    showToast(`${machine.name} logged ✓`);
+    saveExercise({ machineId: machine.id, category: machine.category, goal, weight, sets: isCardio ? [] : clean, difficulty, pain, restsSec: rests.length ? rests : undefined, timing, exerciseId: exercise?.id, exerciseName: exercise?.name, progressionKey: pkey });
+    showToast(`${exercise?.name ?? machine.name} logged ✓`);
     onClose();
   }
 
@@ -128,7 +132,7 @@ export default function ExerciseLogger({
     <Sheet
       open
       onClose={onClose}
-      title={machine.name}
+      title={exercise ? exercise.name : machine.name}
       footer={restOpen ? undefined : (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-4 gap-2">
@@ -157,6 +161,7 @@ export default function ExerciseLogger({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-xs text-muted">
+            {exercise ? <span className="font-bold text-ink">{machine.name} ·</span> : null}
             {EQUIPMENT_LABEL[machine.equipment]}
             {machine.rating === "favorite" ? <span className="text-warn">★</span> : null}
             {machine.trainer ? <span className="chip bg-accent/15 text-accent">trainer</span> : null}

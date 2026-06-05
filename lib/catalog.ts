@@ -126,8 +126,13 @@ export function activeMachines(machines: Machine[]): Machine[] {
   return machines.filter((m) => !m.archived);
 }
 
-export function findMachine(machines: Machine[], id: string): Machine | undefined {
-  return machines.find((m) => m.id === id);
+export function findMachine(machines: Machine[], id: string | undefined): Machine | undefined {
+  return id ? machines.find((m) => m.id === id) : undefined;
+}
+
+/** An all-in-one station (cable / functional trainer) that hosts many exercises. */
+export function isMultiExercise(m: Machine): boolean {
+  return (m.exercises?.length ?? 0) > 0 || m.category === "cable-station";
 }
 
 export function machinesInCategory(machines: Machine[], category: MovementCategory): Machine[] {
