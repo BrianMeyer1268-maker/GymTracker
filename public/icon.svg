@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0a0e14"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#1f2a38" stroke-width="14"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#38bdf8" stroke-width="14" stroke-linecap="round" stroke-dasharray="180 760" transform="rotate(-60 256 256)"/>
+  <!-- compass needle -->
+  <polygon points="256,128 292,256 256,236 220,256" fill="#38bdf8"/>
+  <polygon points="256,384 220,256 256,276 292,256" fill="#7c8aa0"/>
+  <circle cx="256" cy="256" r="20" fill="#0a0e14" stroke="#38bdf8" stroke-width="10"/>
+</svg>
