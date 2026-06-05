@@ -9,6 +9,7 @@ import { downscaleImage } from "@/lib/photos";
 import Sheet from "./Sheet";
 import Segmented from "./Segmented";
 import PhotoTile from "./PhotoTile";
+import ExercisePicker from "./ExercisePicker";
 
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as MovementCategory[];
 const EQUIPMENT = Object.keys(EQUIPMENT_LABEL) as EquipmentType[];
@@ -31,6 +32,7 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
   const hasGym = !!machine.gymPhotoId;
 
   const [name, setName] = useState(machine.needsNaming ? "" : machine.name);
+  const [exercises, setExercises] = useState<string[]>(machine.exercises ?? []);
   const [brand, setBrand] = useState(machine.brand ?? "");
   const [model, setModel] = useState(machine.model ?? "");
   const [category, setCategory] = useState<MovementCategory>(machine.category);
@@ -85,6 +87,7 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
       notes: u(notes),
       primaryMuscles: primary.split(",").map((s) => s.trim()).filter(Boolean),
       secondaryMuscles: secondary.split(",").map((s) => s.trim()).filter(Boolean),
+      exercises: exercises.length ? exercises : undefined,
     });
     showToast("Machine saved ✓");
     onClose();
@@ -189,6 +192,15 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
           <input className={inputCls} value={secondary} placeholder="Front delts" onChange={(e) => setSecondary(e.target.value)} />
         </label>
       </div>
+
+      {/* Exercises — multi-exercise stations (cable / functional trainer) */}
+      {category === "cable-station" || equipment === "cable" ? (
+        <div className="mt-4">
+          <span className={lbl}>Exercises on this machine</span>
+          <p className="-mt-1 mb-2 text-[11px] text-faint">All-in-one station — tag the movements you do here (rows, face pulls, triceps…).</p>
+          <ExercisePicker groups={["cable", "dumbbell", "barbell", "kettlebell", "band", "bodyweight"]} value={exercises} onChange={setExercises} />
+        </div>
+      ) : null}
 
       {/* Working weights */}
       <div className="mt-4">

@@ -1,5 +1,6 @@
 import type { Machine, MovementCategory } from "./types";
 import { CATEGORY_GROUP, type CatalogGroup } from "./movement";
+import { exercisesByGroup } from "./exercises";
 
 // Manufacturer-photo placeholder (local, not copyrighted artwork) per group.
 function photoFor(c: MovementCategory): string {
@@ -112,6 +113,13 @@ for (const machine of SEED_MACHINES) {
   } else if (FAV_ONLY.has(machine.id)) {
     machine.rating = "favorite";
   }
+}
+
+// All-in-one cable stations (functional trainers, crossover) support a whole group
+// of exercises — rows, face pulls, triceps, etc. Seed them so they're usable at once.
+const CABLE_EXERCISES = exercisesByGroup("cable").map((e) => e.id);
+for (const machine of SEED_MACHINES) {
+  if (machine.category === "cable-station") machine.exercises = [...CABLE_EXERCISES];
 }
 
 export function activeMachines(machines: Machine[]): Machine[] {

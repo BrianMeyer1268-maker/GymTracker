@@ -4,9 +4,11 @@ import { useState } from "react";
 import type { ActivityType, ActivityIntensity, SorenessLevel } from "@/lib/types";
 import { ACTIVITY_INTENSITIES, SORENESS_LEVELS } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import { trackerFor, ACTIVITY_LABEL, ACTIVITY_ICON, COMBAT_FOCUS, CARDIO_SUBTYPES, MOVEMENTS, EQUIPMENT_OPTS, BODYWEIGHT_EXERCISES, RECOVERY_FOCUS } from "@/lib/gyms";
+import { trackerFor, ACTIVITY_LABEL, ACTIVITY_ICON, COMBAT_FOCUS, CARDIO_SUBTYPES, RECOVERY_FOCUS } from "@/lib/gyms";
+import { exerciseById, exerciseName, EXERCISE_GROUPS, MOVEMENT_TAG_LABEL } from "@/lib/exercises";
 import { relDate } from "@/lib/date";
 import Segmented from "./Segmented";
+import ExercisePicker from "./ExercisePicker";
 
 function Chips({ options, value, onToggle }: { options: string[]; value: string[]; onToggle: (v: string) => void }) {
   return (
@@ -57,8 +59,6 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
   const [roundLen, setRoundLen] = useState("");
   const [skillFocus, setSkillFocus] = useState("");
   const [focuses, setFocuses] = useState<string[]>([]);
-  const [movements, setMovements] = useState<string[]>([]);
-  const [equipment, setEquipment] = useState<string[]>([]);
   const [exercises, setExercises] = useState<string[]>([]);
 
   const tog = (setter: (f: (p: string[]) => string[]) => void) => (v: string) => setter((p) => (p.includes(v) ? p.filter((x) => x !== v) : [...p, v]));
@@ -78,13 +78,14 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
     setRoundLen("");
     setSkillFocus("");
     setFocuses([]);
-    setMovements([]);
-    setEquipment([]);
     setExercises([]);
   }
 
   function save() {
     const num = (s: string) => (s.trim() === "" ? undefined : Number(s) || undefined);
+    const defs = exercises.map((id) => exerciseById(id)).filter((d): d is NonNullable<typeof d> => !!d);
+    const movements = Array.from(new Set(defs.map((d) => MOVEMENT_TAG_LABEL[d.movement])));
+    const equipment = Array.from(new Set(defs.map((d) => EXERCISE_GROUPS.find((g) => g.id === d.group)?.name).filter((x): x is string => !!x)));
     logActivity({
       activity,
       tracker,
@@ -130,15 +131,12 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
         <div><span className={lbl}>Focus</span><Chips options={combatFocus} value={focuses} onToggle={tog(setFocuses)} /></div>
       ) : null}
 
-      {/* strength movements / equipment */}
-      {(tracker === "free-weight" || tracker === "bodyweight") ? (
-        <div><span className={lbl}>Movement focus</span><Chips options={MOVEMENTS} value={movements} onToggle={tog(setMovements)} /></div>
-      ) : null}
+      {/* exercises grouped by equipment / system */}
       {tracker === "free-weight" ? (
-        <div><span className={lbl}>Equipment</span><Chips options={EQUIPMENT_OPTS} value={equipment} onToggle={tog(setEquipment)} /></div>
+        <div><span className={lbl}>Exercises</span><ExercisePicker groups={["barbell", "dumbbell", "kettlebell", "cable", "band"]} value={exercises} onChange={setExercises} /></div>
       ) : null}
       {tracker === "bodyweight" ? (
-        <div><span className={lbl}>Exercises</span><Chips options={BODYWEIGHT_EXERCISES} value={exercises} onToggle={tog(setExercises)} /></div>
+        <div><span className={lbl}>Exercises</span><ExercisePicker groups={["bodyweight", "band"]} value={exercises} onChange={setExercises} /></div>
       ) : null}
 
       {/* recovery focus */}
@@ -206,6 +204,7 @@ export default function ActivityTracker({ activity, showToast }: { activity: Act
               <div key={l.id} className="flex items-center justify-between rounded-xl border border-line bg-surface px-3 py-2">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold">{ACTIVITY_LABEL[l.activity]}{l.subType ? ` · ${l.subType}` : ""}</div>
+                  {l.exercises?.length ? <div className="truncate text-[11px] text-muted">{l.exercises.map((id) => exerciseName(id)).join(", ")}</div> : null}
                   <div className="truncate text-[11px] text-faint">
                     {relDate(l.date)}
                     {l.durationMin ? ` · ${l.durationMin} min` : ""}

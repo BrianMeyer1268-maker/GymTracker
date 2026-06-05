@@ -92,6 +92,9 @@ export interface Machine {
   custom?: boolean;
   /** Assisted movements: more weight = easier (e.g. assisted pull-up). */
   inverted?: boolean;
+  /** For multi-exercise stations (cable / functional trainer): the exercises this
+   *  machine supports — ids from the grouped exercise library (or custom names). */
+  exercises?: string[];
 }
 
 /** Per-exercise time tracking for pace intelligence. */
