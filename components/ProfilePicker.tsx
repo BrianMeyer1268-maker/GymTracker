@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/profiles";
+import { isUnlockRemembered, rememberUnlock, forgetUnlock, forgetAllUnlocks } from "@/lib/pinUnlock";
 
 function initial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?";
@@ -14,6 +15,8 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
   const [pinFor, setPinFor] = useState<Profile | null>(null);
   const [pinInput, setPinInput] = useState("");
   const [pinErr, setPinErr] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [lockMsg, setLockMsg] = useState(false);
 
   function enter(id: string) {
     if (id !== activeId) switchProfile(id);
@@ -21,7 +24,8 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
   }
   function pick(id: string) {
     const p = profiles.find((x) => x.id === id);
-    if (p?.pinHash) {
+    // Locked profiles skip the PIN once this device has remembered the unlock.
+    if (p?.pinHash && !isUnlockRemembered(id)) {
       setPinFor(p);
       setPinInput("");
       setPinErr(false);
@@ -33,6 +37,7 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
     if (!pinFor) return;
     if (verifyPin(pinFor.id, val)) {
       const id = pinFor.id;
+      if (remember) rememberUnlock(id);
       setPinFor(null);
       setPinInput("");
       enter(id);
@@ -68,7 +73,10 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
     if (v === null) return; // cancelled
     const t = v.trim();
     if (!t) {
-      if (has) setProfilePin(p.id, null);
+      if (has) {
+        setProfilePin(p.id, null);
+        forgetUnlock(p.id);
+      }
       return;
     }
     if (!/^\d{4}$/.test(t)) {
@@ -76,6 +84,12 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
       return;
     }
     setProfilePin(p.id, t);
+    rememberUnlock(p.id); // just set it — don't immediately lock yourself out
+  }
+  function relock() {
+    forgetAllUnlocks();
+    setLockMsg(true);
+    if (typeof window !== "undefined") window.setTimeout(() => setLockMsg(false), 1800);
   }
 
   return (
@@ -138,7 +152,16 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
       <button className="text-sm font-semibold text-muted active:text-ink" onClick={() => setEdit((v) => !v)}>
         {edit ? "Done editing" : "Edit profiles"}
       </button>
-      {edit ? <p className="-mt-3 text-center text-[11px] text-faint">Tap 🔓/🔒 to set a private PIN · tap a tile to rename</p> : null}
+      {edit ? (
+        <>
+          <p className="-mt-3 text-center text-[11px] text-faint">Tap 🔓/🔒 to set a private PIN · tap a tile to rename</p>
+          {profiles.some((p) => p.pinHash) ? (
+            <button onClick={relock} className="-mt-2 text-xs font-semibold text-muted active:text-ink">
+              {lockMsg ? "Locked ✓ — PIN required next time" : "Re-lock now (require PIN next time)"}
+            </button>
+          ) : null}
+        </>
+      ) : null}
 
       {pinFor ? (
         <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center gap-5 bg-black/80 px-8 backdrop-blur-sm">
@@ -158,6 +181,10 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
             className={`w-44 rounded-xl border bg-surface2 px-4 py-3 text-center text-3xl tracking-[0.4em] outline-none ${pinErr ? "border-bad" : "border-line"}`}
           />
           {pinErr ? <div className="text-sm font-semibold text-bad">Wrong PIN — try again</div> : <div className="text-xs text-faint">4-digit PIN</div>}
+          <button onClick={() => setRemember((v) => !v)} className="flex items-center gap-2 text-sm text-muted active:text-ink">
+            <span className={`flex h-5 w-5 items-center justify-center rounded border text-[11px] font-bold ${remember ? "border-accent bg-accent text-accent-ink" : "border-line"}`}>{remember ? "✓" : ""}</span>
+            Remember on this device
+          </button>
           <div className="flex gap-3">
             <button onClick={() => { setPinFor(null); setPinInput(""); setPinErr(false); }} className="rounded-xl border border-line px-5 py-3 font-semibold active:bg-surface2">
               Cancel
