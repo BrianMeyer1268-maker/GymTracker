@@ -1,48 +1,68 @@
-import type { MachineConfidence, MovementCategory } from "./types";
+import type { MovementCategory } from "./types";
+import { getAccessCode } from "./access";
 
-export interface DetectedMachine {
+export interface DetectedEquipment {
   name: string;
-  brand?: string | null;
   category: MovementCategory | string;
-  primaryMuscles?: string[];
+  brand?: string | null;
   beginnerLabel?: string;
-  confidence?: MachineConfidence;
+  confidence?: number;
 }
 
-export interface GymResult {
+export interface GymParse {
   gymName?: string | null;
-  brands?: string[];
-  notes?: string | null;
-  machines: DetectedMachine[];
+  hours?: string | null;
+  machineBrands?: string[];
+  cardioOptions?: string[];
+  detectedEquipment: DetectedEquipment[];
+  confidence?: number;
+  needsReview?: boolean;
 }
 
-export interface BodyResult {
+export interface FitdaysParse {
   date?: string | null;
   weight?: number | null;
-  bodyFat?: number | null;
+  bodyFatPercent?: number | null;
   skeletalMuscle?: number | null;
   visceralFat?: number | null;
-  waist?: number | null;
-  units?: string | null;
-  notes?: string | null;
+  bodyWater?: number | null;
+  bmr?: number | null;
+  confidence?: number;
+  needsReview?: boolean;
 }
 
-async function call(kind: "gym" | "body", input: { images?: string[]; text?: string }): Promise<unknown> {
-  const resp = await fetch("/api/interpret", {
+export interface MachineClass {
+  friendlyName?: string;
+  brand?: string | null;
+  model?: string | null;
+  movementCategory?: MovementCategory | string;
+  primaryMuscles?: string[];
+  secondaryMuscles?: string[];
+  setupNotes?: string | null;
+  confidence?: number;
+  needsReview?: boolean;
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const resp = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind, images: input.images ?? [], text: input.text ?? "" }),
+    headers: { "Content-Type": "application/json", "x-access-code": getAccessCode() },
+    body: JSON.stringify(body),
   });
-  const json = (await resp.json().catch(() => ({}))) as { result?: unknown; error?: string };
+  const json = (await resp.json().catch(() => ({}))) as { result?: T; error?: string };
   if (!resp.ok) throw new Error(json?.error || `Request failed (${resp.status})`);
-  return json.result;
+  return json.result as T;
 }
 
-export async function interpretGym(input: { images?: string[]; text?: string }): Promise<GymResult> {
-  const r = (await call("gym", input)) as GymResult;
-  return { ...r, machines: Array.isArray(r?.machines) ? r.machines : [] };
+export async function parseGym(input: { images?: string[]; text?: string; notes?: string }): Promise<GymParse> {
+  const r = await post<GymParse>("/api/ai/parse-gym", input);
+  return { ...r, detectedEquipment: Array.isArray(r?.detectedEquipment) ? r.detectedEquipment : [] };
 }
 
-export async function interpretBody(input: { images?: string[]; text?: string }): Promise<BodyResult> {
-  return (await call("body", input)) as BodyResult;
+export function parseFitdays(input: { images?: string[]; text?: string }): Promise<FitdaysParse> {
+  return post<FitdaysParse>("/api/ai/parse-fitdays", input);
+}
+
+export function classifyMachine(input: { images?: string[]; text?: string }): Promise<MachineClass> {
+  return post<MachineClass>("/api/ai/classify-machine", input);
 }

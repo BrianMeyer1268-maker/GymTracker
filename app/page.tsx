@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorkoutGoal } from "@/lib/types";
 import { useStore } from "@/lib/store";
+import { isUnlocked } from "@/lib/access";
+import Login from "@/components/Login";
 import Nav, { type Tab } from "@/components/Nav";
 import Today from "@/components/Today";
 import MachineCatalog from "@/components/MachineCatalog";
@@ -14,6 +16,13 @@ export default function Page() {
   const { ready, setGoal } = useStore();
   const [tab, setTab] = useState<Tab>("today");
   const [toast, setToast] = useState<string | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    setUnlocked(isUnlocked());
+    setAuthChecked(true);
+  }, []);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -24,6 +33,9 @@ export default function Page() {
     setGoal(g);
     setTab("today");
   }
+
+  if (!authChecked) return <div className="grid min-h-[100dvh] place-items-center text-faint">Loading…</div>;
+  if (!unlocked) return <Login onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col">

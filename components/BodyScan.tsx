@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { BodyCompEntry } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { downscaleImage } from "@/lib/photos";
-import { interpretBody } from "@/lib/aiClient";
+import { parseFitdays } from "@/lib/aiClient";
 import { todayISO } from "@/lib/date";
 import Sheet from "./Sheet";
 
@@ -27,18 +27,20 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [extracted, setExtracted] = useState(false);
+  const [review, setReview] = useState(false);
 
   const [date, setDate] = useState(todayISO());
   const [weight, setWeight] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [muscle, setMuscle] = useState("");
   const [visceral, setVisceral] = useState("");
-  const [waist, setWaist] = useState("");
+  const [water, setWater] = useState("");
+  const [bmr, setBmr] = useState("");
 
   async function addPhoto(file: File) {
     try {
       const url = await downscaleImage(file, 1100, 0.75);
-      setImages((p) => [...p, url].slice(0, 3));
+      setImages((p) => [...p, url].slice(0, 2));
     } catch {
       showToast("Couldn't read that image");
     }
@@ -51,15 +53,17 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
     }
     setLoading(true);
     try {
-      const r = await interpretBody({ images, text });
+      const r = await parseFitdays({ images, text });
       if (r.date) setDate(r.date);
       setWeight(numStr(r.weight));
-      setBodyFat(numStr(r.bodyFat));
+      setBodyFat(numStr(r.bodyFatPercent));
       setMuscle(numStr(r.skeletalMuscle));
       setVisceral(numStr(r.visceralFat));
-      setWaist(numStr(r.waist));
+      setWater(numStr(r.bodyWater));
+      setBmr(numStr(r.bmr));
+      setReview(!!r.needsReview);
       setExtracted(true);
-      showToast(r.weight != null ? "Read it ✓ — check the numbers" : "Couldn't find numbers — enter manually");
+      showToast(r.weight != null ? "Read it ✓ — confirm the numbers" : "Couldn't find numbers — enter manually");
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Interpretation failed");
     } finally {
@@ -80,7 +84,8 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
       bodyFat: num(bodyFat),
       skeletalMuscle: num(muscle),
       visceralFat: num(visceral),
-      waist: num(waist),
+      bodyWater: num(water),
+      bmr: num(bmr),
     };
     upsertBodyComp(entry);
     showToast("Body comp saved ✓");
@@ -95,7 +100,7 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
       footer={
         extracted ? (
           <button className="tap min-h-[52px] w-full rounded-xl bg-accent font-bold text-accent-ink" onClick={save}>
-            Save entry
+            Confirm &amp; save
           </button>
         ) : (
           <button className="tap min-h-[52px] w-full rounded-xl bg-accent font-bold text-accent-ink disabled:opacity-50" disabled={loading} onClick={run}>
@@ -104,8 +109,8 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
         )
       }
     >
-      <p className="text-sm text-muted">Upload a screenshot of your scale/app result (Fitdays, InBody…) or paste the numbers. AI fills in the fields for you to confirm.</p>
-      <p className="mt-1 text-[11px] text-faint">The image is sent to OpenAI to read. Nothing else leaves your device.</p>
+      <p className="text-sm text-muted">Upload a screenshot of your scale/app result (Fitdays, InBody…) or paste the numbers. AI fills the fields for you to confirm.</p>
+      <p className="mt-1 text-[11px] text-faint">⚠ The image leaves your device and goes to OpenAI to be read. Nothing else does.</p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {images.map((src, i) => (
@@ -115,7 +120,7 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
             <button className="absolute right-0 top-0 bg-black/60 px-1 text-xs text-white" onClick={() => setImages((p) => p.filter((_, j) => j !== i))}>✕</button>
           </div>
         ))}
-        {images.length < 3 ? (
+        {images.length < 2 ? (
           <button className="h-20 w-16 rounded-lg border border-dashed border-line text-2xl text-faint active:bg-surface2" onClick={() => fileRef.current?.click()}>+</button>
         ) : null}
       </div>
@@ -123,12 +128,15 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
 
       <label className="mt-3 block">
         <span className="mb-1.5 block text-xs font-bold text-muted">Or paste the numbers (optional)</span>
-        <textarea className={`${inputCls} min-h-[64px] py-2 text-sm font-normal`} value={text} placeholder="weight 230.6, body fat 26.9%, skeletal muscle 97.2, visceral fat 11" onChange={(e) => setText(e.target.value)} />
+        <textarea className={`${inputCls} min-h-[64px] py-2 text-sm font-normal`} value={text} placeholder="weight 230.6, body fat 26.9%, skeletal muscle 97.2, visceral fat 11, body water 55%, bmr 2050" onChange={(e) => setText(e.target.value)} />
       </label>
 
       {extracted ? (
         <div className="mt-4">
-          <div className="mb-2 text-sm font-bold">Confirm</div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+            Confirm
+            {review ? <span className="chip bg-warn/15 text-warn">needs review</span> : null}
+          </div>
           <label className="mb-3 block">
             <span className="mb-1.5 block text-xs font-bold text-muted">Date</span>
             <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value || todayISO())} className={inputCls} style={{ colorScheme: "dark" }} />
@@ -138,7 +146,8 @@ export default function BodyScan({ onClose, showToast }: { onClose: () => void; 
             <Field label="Body Fat (%)" value={bodyFat} onChange={setBodyFat} />
             <Field label="Skeletal Muscle" value={muscle} onChange={setMuscle} />
             <Field label="Visceral Fat" value={visceral} onChange={setVisceral} />
-            <Field label="Waist (in)" value={waist} onChange={setWaist} />
+            <Field label="Body Water (%)" value={water} onChange={setWater} />
+            <Field label="BMR (cal)" value={bmr} onChange={setBmr} />
           </div>
         </div>
       ) : null}

@@ -173,6 +173,8 @@ export interface BodyCompEntry {
   skeletalMuscle?: number;
   visceralFat?: number;
   waist?: number;
+  bodyWater?: number; // %
+  bmr?: number; // calories
 }
 
 /** The live state of today's session — persisted so the app resumes mid-workout. */

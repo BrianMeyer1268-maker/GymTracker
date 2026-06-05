@@ -20,6 +20,7 @@ import { relDate } from "@/lib/date";
 import Navigator from "./Navigator";
 import Segmented from "./Segmented";
 import Sheet from "./Sheet";
+import AIImport from "./AIImport";
 
 const GOAL_RING: Record<WorkoutGoal, string> = {
   push: "border-push/60 bg-push/10",
@@ -45,6 +46,7 @@ function Stat({ label, value, unit }: { label: string; value: string; unit?: str
 export default function Today({ showToast }: { showToast: (m: string) => void }) {
   const { data, setPhase, setReadiness, setCrowd, setGoal } = useStore();
   const [phaseOpen, setPhaseOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const latest = sortedBodyComp(data.bodyComp).slice(-1)[0];
   const lastWk = lastWorkoutDate(data.logs);
@@ -61,13 +63,17 @@ export default function Today({ showToast }: { showToast: (m: string) => void })
           <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-faint">Iron Compass</div>
           <h1 className="text-2xl font-extrabold leading-tight">Today</h1>
         </div>
-        <button
-          className="flex items-center gap-1.5 rounded-full border border-line bg-surface2 px-3 py-2 text-sm font-bold active:bg-surface3"
-          onClick={() => setPhaseOpen(true)}
-        >
-          <span className="h-2 w-2 rounded-full bg-accent" /> {PHASE_LABEL[data.phase]} <span className="text-faint">▾</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface2 text-base active:bg-surface3" aria-label="AI import" onClick={() => setAiOpen(true)}>
+            ✨
+          </button>
+          <button className="flex items-center gap-1.5 rounded-full border border-line bg-surface2 px-3 py-2 text-sm font-bold active:bg-surface3" onClick={() => setPhaseOpen(true)}>
+            <span className="h-2 w-2 rounded-full bg-accent" /> {PHASE_LABEL[data.phase]} <span className="text-faint">▾</span>
+          </button>
+        </div>
       </header>
+
+      {aiOpen ? <AIImport onClose={() => setAiOpen(false)} showToast={showToast} /> : null}
 
       {/* Stats strip — hidden during an active workout (Quick Gym Mode) */}
       {!goal ? (
