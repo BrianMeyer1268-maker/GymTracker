@@ -43,8 +43,8 @@ function Stat({ label, value, unit }: { label: string; value: string; unit?: str
   );
 }
 
-export default function Today({ showToast }: { showToast: (m: string) => void }) {
-  const { data, setPhase, setReadiness, setCrowd, setGoal } = useStore();
+export default function Today({ showToast, onSwitchProfile }: { showToast: (m: string) => void; onSwitchProfile: () => void }) {
+  const { data, activeProfile, setPhase, setReadiness, setCrowd, setGoal } = useStore();
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
 
@@ -59,10 +59,15 @@ export default function Today({ showToast }: { showToast: (m: string) => void })
     <div className="flex flex-col gap-4">
       {/* Header */}
       <header className="flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-faint">Iron Compass</div>
-          <h1 className="text-2xl font-extrabold leading-tight">Today</h1>
-        </div>
+        <button onClick={onSwitchProfile} className="flex items-center gap-2.5 text-left active:opacity-70" aria-label="Switch profile">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full text-base font-extrabold text-[#04181f]" style={{ backgroundColor: activeProfile?.color ?? "#38bdf8" }}>
+            {(activeProfile?.name ?? "?").trim().charAt(0).toUpperCase()}
+          </span>
+          <span>
+            <span className="block text-[11px] font-bold uppercase tracking-[0.18em] text-faint">{activeProfile?.name ?? "Iron Compass"} ▾</span>
+            <span className="block text-2xl font-extrabold leading-tight">Today</span>
+          </span>
+        </button>
         <div className="flex items-center gap-2">
           <button className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface2 text-base active:bg-surface3" aria-label="AI import" onClick={() => setAiOpen(true)}>
             ✨

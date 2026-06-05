@@ -5,6 +5,7 @@ import type { WorkoutGoal } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { isUnlocked } from "@/lib/access";
 import Login from "@/components/Login";
+import ProfilePicker from "@/components/ProfilePicker";
 import Nav, { type Tab } from "@/components/Nav";
 import Today from "@/components/Today";
 import MachineCatalog from "@/components/MachineCatalog";
@@ -18,6 +19,7 @@ export default function Page() {
   const [toast, setToast] = useState<string | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [profileChosen, setProfileChosen] = useState(false);
 
   useEffect(() => {
     setUnlocked(isUnlocked());
@@ -34,16 +36,15 @@ export default function Page() {
     setTab("today");
   }
 
-  if (!authChecked) return <div className="grid min-h-[100dvh] place-items-center text-faint">Loading…</div>;
+  if (!authChecked || !ready) return <div className="grid min-h-[100dvh] place-items-center text-faint">Loading…</div>;
   if (!unlocked) return <Login onUnlock={() => setUnlocked(true)} />;
+  if (!profileChosen) return <ProfilePicker onDone={() => setProfileChosen(true)} />;
 
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col">
       <main className="flex-1 px-4 pb-28 pt-5">
-        {!ready ? (
-          <div className="grid min-h-[60dvh] place-items-center text-faint">Loading…</div>
-        ) : tab === "today" ? (
-          <Today showToast={showToast} />
+        {tab === "today" ? (
+          <Today showToast={showToast} onSwitchProfile={() => setProfileChosen(false)} />
         ) : tab === "machines" ? (
           <MachineCatalog showToast={showToast} />
         ) : tab === "timing" ? (

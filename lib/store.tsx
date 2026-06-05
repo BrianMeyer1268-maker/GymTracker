@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { AppData, AvailabilityObservation, BodyCompEntry, Crowd, DayPlan, ExerciseLog, Machine, Phase, Readiness, StationEvent, SwitchReason, WorkoutGoal, WorkoutSession } from "./types";
-import { loadData, saveData, seededDefault, uid, applyImport } from "./storage";
+import { seededDefault, uid, applyImport } from "./storage";
+import { ensureProfiles, loadProfileData, saveProfileData, persistState, makeProfile, initNewProfileData, deleteProfileData, applyShareToggle, type Profile } from "./profiles";
 import { setPhoto, deletePhoto, uidPhoto } from "./photos";
 import { todayISO, timeBucket } from "./date";
 
@@ -12,6 +13,17 @@ export type NewLog = Omit<ExerciseLog, "id" | "date" | "loggedAt" | "sessionId">
 interface Store {
   data: AppData;
   ready: boolean;
+  // profiles
+  profiles: Profile[];
+  activeId: string;
+  activeProfile: Profile | undefined;
+  shareCatalog: boolean;
+  switchProfile: (id: string) => void;
+  addProfile: (name: string) => void;
+  renameProfile: (id: string, name: string) => void;
+  deleteProfile: (id: string) => void;
+  setShareCatalog: (on: boolean) => void;
+  // workout / data
   setPhase: (p: Phase) => void;
   setReadiness: (r: Readiness) => void;
   setCrowd: (c: Crowd) => void;
@@ -70,14 +82,26 @@ function pushObs(d: AppData, machineId: string, action: AvailabilityObservation[
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => seededDefault());
   const [ready, setReady] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
+  const [shareCatalog, setShareCatalogState] = useState(true);
+  const activeRef = useRef("");
+  const shareRef = useRef(true);
 
   useEffect(() => {
-    setData(loadData());
+    const st = ensureProfiles();
+    setProfiles(st.profiles);
+    setActiveId(st.activeId);
+    setShareCatalogState(st.shareCatalog);
+    activeRef.current = st.activeId;
+    shareRef.current = st.shareCatalog;
+    setData(loadProfileData(st.activeId, st.shareCatalog));
     setReady(true);
   }, []);
 
+  // Persist active profile's data whenever it changes (machines route to the shared catalog when enabled).
   useEffect(() => {
-    if (ready) saveData(data);
+    if (ready && activeRef.current) saveProfileData(activeRef.current, data, shareRef.current);
   }, [data, ready]);
 
   const store = useMemo<Store>(() => {
@@ -86,6 +110,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return {
       data,
       ready,
+      profiles,
+      activeId,
+      activeProfile: profiles.find((p) => p.id === activeId),
+      shareCatalog,
+      switchProfile: (id) => {
+        if (id === activeRef.current) return;
+        activeRef.current = id;
+        setActiveId(id);
+        persistState({ profiles, activeId: id, shareCatalog });
+        setData(loadProfileData(id, shareRef.current));
+      },
+      addProfile: (name) => {
+        const p = makeProfile(name, profiles.length);
+        initNewProfileData(p.id, shareRef.current);
+        const next = [...profiles, p];
+        setProfiles(next);
+        activeRef.current = p.id;
+        setActiveId(p.id);
+        persistState({ profiles: next, activeId: p.id, shareCatalog });
+        setData(loadProfileData(p.id, shareRef.current));
+      },
+      renameProfile: (id, name) => {
+        const next = profiles.map((p) => (p.id === id ? { ...p, name: name.trim() || p.name } : p));
+        setProfiles(next);
+        persistState({ profiles: next, activeId: activeRef.current, shareCatalog });
+      },
+      deleteProfile: (id) => {
+        if (profiles.length <= 1) return;
+        deleteProfileData(id);
+        const next = profiles.filter((p) => p.id !== id);
+        setProfiles(next);
+        let nextActive = activeRef.current;
+        if (id === activeRef.current) {
+          nextActive = next[0].id;
+          activeRef.current = nextActive;
+          setActiveId(nextActive);
+          setData(loadProfileData(nextActive, shareRef.current));
+        }
+        persistState({ profiles: next, activeId: nextActive, shareCatalog });
+      },
+      setShareCatalog: (on) => {
+        if (on === shareRef.current) return;
+        applyShareToggle({ profiles, activeId: activeRef.current, shareCatalog: shareRef.current }, on, data.machines);
+        shareRef.current = on;
+        setShareCatalogState(on);
+        persistState({ profiles, activeId: activeRef.current, shareCatalog: on });
+        setData(loadProfileData(activeRef.current, on));
+      },
+
       setPhase: (p) => setData((d) => ({ ...d, phase: p })),
       setReadiness: (r) => patchToday((t) => ({ ...t, readiness: r })),
       setCrowd: (c) =>
@@ -171,7 +244,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setData((d) => {
           const now = Date.now();
           const entry: ExerciseLog = { ...log, id: uid(), date: todayISO(), loggedAt: now, sessionId: d.today?.sessionId };
-          // Only significant pain flags the movement; "none" clears it; "minor" leaves it as-is.
           const flagged =
             log.pain === "none"
               ? d.flagged.filter((x) => x !== log.machineId)
@@ -208,7 +280,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       importBackup: (text) => setData(applyImport(text)),
       replaceData: (nd) => setData(nd),
     };
-  }, [data, ready]);
+  }, [data, ready, profiles, activeId, shareCatalog]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
