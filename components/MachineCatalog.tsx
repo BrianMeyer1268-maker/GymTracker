@@ -12,6 +12,7 @@ import { downscaleImage } from "@/lib/photos";
 import PhotoTile from "./PhotoTile";
 import MachineDetail from "./MachineDetail";
 import GymScan from "./GymScan";
+import ClassifyMachine from "./ClassifyMachine";
 
 const VIEWS: { id: CatalogView; label: string }[] = [
   { id: "all", label: "All" },
@@ -44,6 +45,7 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [idOpen, setIdOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoTarget = useRef<string | null>(null);
 
@@ -110,6 +112,9 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
           <h1 className="text-2xl font-extrabold leading-tight">Machines</h1>
         </div>
         <div className="flex gap-2">
+          <button className="min-h-[44px] rounded-xl border border-line bg-surface2 px-3 text-sm font-bold active:scale-95" onClick={() => setIdOpen(true)} aria-label="Identify a machine with AI">
+            🔎 ID
+          </button>
           <button className="min-h-[44px] rounded-xl border border-accent/50 bg-accent/10 px-3 text-sm font-bold text-accent active:scale-95" onClick={() => setScanOpen(true)}>
             ✨ Scan
           </button>
@@ -222,6 +227,7 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
 
       {selected ? <MachineDetail machine={selected} onClose={() => setSelectedId(null)} showToast={showToast} /> : null}
       {scanOpen ? <GymScan onClose={() => setScanOpen(false)} showToast={showToast} /> : null}
+      {idOpen ? <ClassifyMachine onClose={() => setIdOpen(false)} showToast={showToast} /> : null}
     </div>
   );
 }
