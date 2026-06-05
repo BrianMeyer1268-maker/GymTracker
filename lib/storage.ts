@@ -18,7 +18,7 @@ export function seededDefault(): AppData {
   return {
     version: 3,
     phase: "recomp",
-    machines: SEED_MACHINES.map((m) => ({ ...m })),
+    machines: SEED_MACHINES.map((m) => normalizeMachine({ ...m })),
     logs: [],
     bodyComp: SEED_BODYCOMP.map((e) => ({ ...e })),
     flagged: [],
@@ -34,18 +34,24 @@ export function freshProfileData(): AppData {
   return { ...seededDefault(), bodyComp: [] };
 }
 
-/** Migrate the legacy `photoId` field to `gymPhotoId`. */
+/** Normalize a stored machine: migrate legacy `photoId`, and drop the brand/series
+ *  prefix from the name (e.g. "Versa Converging Chest Press" → "Converging Chest
+ *  Press") so names are shorter and easier to search. The series stays in `model`. */
 function normalizeMachine(m: Machine): Machine {
-  if (m.photoId && !m.gymPhotoId) return { ...m, gymPhotoId: m.photoId, photoId: undefined };
-  return m;
+  let out: Machine = m;
+  if (out.photoId && !out.gymPhotoId) out = { ...out, gymPhotoId: out.photoId, photoId: undefined };
+  if (out.model && out.name.startsWith(`${out.model} `)) {
+    out = { ...out, name: out.name.slice(out.model.length + 1) };
+  }
+  return out;
 }
 
 /** Keep the user's machines, but add any new seed machines they don't have yet. */
 export function mergeMachines(userMachines: unknown): Machine[] {
-  if (!Array.isArray(userMachines) || userMachines.length === 0) return SEED_MACHINES.map((m) => ({ ...m }));
+  if (!Array.isArray(userMachines) || userMachines.length === 0) return SEED_MACHINES.map((m) => normalizeMachine({ ...m }));
   const merged = (userMachines as Machine[]).map(normalizeMachine);
   const have = new Set(merged.map((m) => m.id));
-  for (const s of SEED_MACHINES) if (!have.has(s.id)) merged.push({ ...s });
+  for (const s of SEED_MACHINES) if (!have.has(s.id)) merged.push(normalizeMachine({ ...s }));
   return merged;
 }
 
@@ -59,7 +65,7 @@ export function restoreSeeds(machines: Machine[]): Machine[] {
   const byId = new Map<string, Machine>(machines.map((m) => [m.id, m]));
   for (const s of SEED_MACHINES) {
     const ex = byId.get(s.id);
-    if (!ex) byId.set(s.id, { ...s });
+    if (!ex) byId.set(s.id, normalizeMachine({ ...s }));
     else if (ex.archived) byId.set(s.id, { ...ex, archived: false });
   }
   return Array.from(byId.values());

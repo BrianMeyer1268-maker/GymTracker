@@ -29,7 +29,6 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
   const lastUsed = lastLogFor(data.logs, machine.id)?.weight;
   const best = bestWeightFor(data.logs, machine.id);
   const hasGym = !!machine.gymPhotoId;
-  const hasMfr = !!machine.manufacturerPhoto;
 
   const [name, setName] = useState(machine.needsNaming ? "" : machine.name);
   const [brand, setBrand] = useState(machine.brand ?? "");
@@ -113,10 +112,10 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
           </button>
           {hasGym ? (
             <button className="text-xs text-faint active:text-bad" onClick={() => removeGymPhoto(machine.id)}>
-              {hasMfr ? "Reset to manufacturer photo" : "Remove gym photo"}
+              Remove gym photo
             </button>
           ) : (
-            <span className="text-[11px] text-faint">{hasMfr ? `Showing ${machine.photoSource ?? "stock"} photo (placeholder). Snap your machine to replace it.` : "Snap the machine so you recognize it by picture."}</span>
+            <span className="text-[11px] text-faint">Snap the actual machine so you recognize it by picture.</span>
           )}
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ""; }} />
         </div>

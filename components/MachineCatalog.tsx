@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { Machine } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { findMachine, machinesForView, type CatalogView } from "@/lib/catalog";
 import { lastLogFor } from "@/lib/analytics";
@@ -25,15 +26,32 @@ const VIEWS: { id: CatalogView; label: string }[] = [
   { id: "trainer", label: "Trainer Uses" },
 ];
 
+/** Free-text match across name, brand/model and muscles. */
+function matchesQuery(m: Machine, ql: string): boolean {
+  return (
+    m.name.toLowerCase().includes(ql) ||
+    (m.brand ?? "").toLowerCase().includes(ql) ||
+    (m.model ?? "").toLowerCase().includes(ql) ||
+    CATEGORY_LABEL[m.category].toLowerCase().includes(ql) ||
+    (m.primaryMuscles ?? []).some((mu) => mu.toLowerCase().includes(ql)) ||
+    (m.secondaryMuscles ?? []).some((mu) => mu.toLowerCase().includes(ql))
+  );
+}
+
 export default function MachineCatalog({ showToast }: { showToast: (m: string) => void }) {
   const { data, addMachine, setGymPhoto, restoreDefaultMachines } = useStore();
   const [view, setView] = useState<CatalogView>("all");
+  const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoTarget = useRef<string | null>(null);
 
-  const list = machinesForView(data.machines, view).slice().sort((a, b) => a.name.localeCompare(b.name));
+  const ql = q.trim().toLowerCase();
+  const list = machinesForView(data.machines, view)
+    .filter((m) => !ql || matchesQuery(m, ql))
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
   const usedToday = new Set(data.logs.filter((l) => l.date === todayISO()).map((l) => l.machineId));
 
   function addNew() {
@@ -101,6 +119,22 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
         </div>
       </header>
 
+      {/* Search */}
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" aria-hidden>🔍</span>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search machines, brand or muscle…"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-surface2 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        {q ? (
+          <button aria-label="clear search" onClick={() => setQ("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-faint active:bg-surface3">
+            ✕
+          </button>
+        ) : null}
+      </div>
+
       {/* View pills */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {VIEWS.map((v) => {
@@ -121,8 +155,12 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
       {/* Grid */}
       {list.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 p-8 text-center text-sm text-faint">
-          <span>{view === "needs-naming" ? "Nothing needs naming. 🎉" : view === "needs-photo" ? "Every machine has a gym photo. 📸" : "No machines here yet."}</span>
-          {view !== "needs-naming" && view !== "needs-photo" ? (
+          <span>{ql ? `No machines match “${q.trim()}”.` : view === "needs-naming" ? "Nothing needs naming. 🎉" : view === "needs-photo" ? "Every machine has a gym photo. 📸" : "No machines here yet."}</span>
+          {ql ? (
+            <button onClick={() => setQ("")} className="min-h-[44px] rounded-xl border border-line px-5 text-sm font-semibold active:bg-surface2">
+              Clear search
+            </button>
+          ) : view !== "needs-naming" && view !== "needs-photo" ? (
             <button onClick={restore} className="min-h-[44px] rounded-xl bg-accent px-5 text-sm font-bold text-accent-ink active:scale-95">
               Restore default machines
             </button>
@@ -151,20 +189,21 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
                   <button onClick={() => setSelectedId(m.id)} className="min-w-0 flex-1 text-left">
                     <div className="truncate text-sm font-bold">{m.name}</div>
                     <div className="truncate text-[11px] text-muted">
-                      {m.brand ? `${m.brand} · ` : ""}
+                      {[m.brand, m.model].filter(Boolean).join(" ")}
+                      {m.brand || m.model ? " · " : ""}
                       {CATEGORY_LABEL[m.category]}
                     </div>
                     {last ? <div className="text-[11px] tabular-nums text-faint">last {last.weight} lb</div> : null}
                   </button>
                   <button
-                    className="tap flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line text-sm active:bg-surface2"
-                    aria-label={`photo for ${m.name}`}
+                    className="tap flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg border border-line px-2 text-sm active:bg-surface2"
+                    aria-label={`${m.gymPhotoId ? "replace photo" : "add photo"} for ${m.name}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       openPhoto(m.id);
                     }}
                   >
-                    📷
+                    📷{!m.gymPhotoId ? <span className="text-[11px] font-semibold">Add</span> : null}
                   </button>
                 </div>
               </div>
