@@ -2,13 +2,15 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { AppData, AvailabilityObservation, BodyCompEntry, Crowd, DayPlan, ExerciseLog, Machine, Phase, Readiness, StationEvent, SwitchReason, WorkoutGoal, WorkoutSession } from "./types";
+import type { ActivityLog, AppData, AvailabilityObservation, BodyCompEntry, Crowd, DayPlan, ExerciseLog, GymLocation, Machine, Phase, Readiness, StationEvent, SwitchReason, WorkoutGoal, WorkoutSession } from "./types";
 import { seededDefault, uid, applyImport, restoreSeeds } from "./storage";
 import { ensureProfiles, loadProfileData, saveProfileData, persistState, makeProfile, initNewProfileData, deleteProfileData, applyShareToggle, hashPin, type Profile } from "./profiles";
+import { resolveActiveLocation } from "./gyms";
 import { setPhoto, deletePhoto, uidPhoto } from "./photos";
 import { todayISO, timeBucket } from "./date";
 
 export type NewLog = Omit<ExerciseLog, "id" | "date" | "loggedAt" | "sessionId">;
+export type NewActivity = Omit<ActivityLog, "id" | "date" | "at" | "locationId" | "locationName">;
 
 interface Store {
   data: AppData;
@@ -25,6 +27,17 @@ interface Store {
   setShareCatalog: (on: boolean) => void;
   setProfilePin: (id: string, pin: string | null) => void;
   verifyPin: (id: string, pin: string) => boolean;
+  // locations / activities
+  locations: GymLocation[];
+  activeLocation: GymLocation | undefined;
+  setActiveLocation: (id: string) => void;
+  setDefaultLocation: (id: string) => void;
+  toggleFavoriteLocation: (id: string) => void;
+  addLocation: (loc: GymLocation) => void;
+  updateLocation: (id: string, patch: Partial<GymLocation>) => void;
+  deleteLocation: (id: string) => void;
+  logActivity: (entry: NewActivity) => void;
+  deleteActivityLog: (id: string) => void;
   // workout / data
   setPhase: (p: Phase) => void;
   setReadiness: (r: Readiness) => void;
@@ -171,6 +184,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const p = profiles.find((x) => x.id === id);
         return !p?.pinHash || hashPin(pin, id) === p.pinHash;
       },
+
+      locations: data.locations,
+      activeLocation: resolveActiveLocation(data.locations, data.activeLocationId, data.defaultLocationId),
+      setActiveLocation: (id) => setData((d) => ({ ...d, activeLocationId: id })),
+      setDefaultLocation: (id) => setData((d) => ({ ...d, defaultLocationId: id, activeLocationId: d.activeLocationId ?? id })),
+      toggleFavoriteLocation: (id) =>
+        setData((d) => {
+          const favs = d.favoriteLocationIds ?? [];
+          return { ...d, favoriteLocationIds: favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id] };
+        }),
+      addLocation: (loc) => setData((d) => ({ ...d, locations: [...d.locations, loc], activeLocationId: loc.id })),
+      updateLocation: (id, patch) => setData((d) => ({ ...d, locations: d.locations.map((l) => (l.id === id ? { ...l, ...patch } : l)) })),
+      deleteLocation: (id) =>
+        setData((d) => {
+          const locations = d.locations.filter((l) => l.id !== id);
+          return {
+            ...d,
+            locations,
+            defaultLocationId: d.defaultLocationId === id ? locations[0]?.id : d.defaultLocationId,
+            activeLocationId: d.activeLocationId === id ? undefined : d.activeLocationId,
+            favoriteLocationIds: (d.favoriteLocationIds ?? []).filter((x) => x !== id),
+          };
+        }),
+      logActivity: (entry) =>
+        setData((d) => {
+          const loc = resolveActiveLocation(d.locations, d.activeLocationId, d.defaultLocationId);
+          const log: ActivityLog = { ...entry, id: uid(), date: todayISO(), at: Date.now(), locationId: loc?.id ?? "", locationName: loc?.name ?? "" };
+          return { ...d, activityLogs: [...d.activityLogs, log].slice(-2000) };
+        }),
+      deleteActivityLog: (id) => setData((d) => ({ ...d, activityLogs: d.activityLogs.filter((l) => l.id !== id) })),
 
       setPhase: (p) => setData((d) => ({ ...d, phase: p })),
       setReadiness: (r) => patchToday((t) => ({ ...t, readiness: r })),

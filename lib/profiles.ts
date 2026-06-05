@@ -1,6 +1,7 @@
 import type { AppData, Machine } from "./types";
 import { PHASES } from "./types";
 import { seededDefault, freshProfileData, migrate, mergeMachines, restoreSeeds, hasActiveMachine, uid } from "./storage";
+import { DEFAULT_LOCATION_KAT } from "./gyms";
 
 export interface Profile {
   id: string;
@@ -101,7 +102,7 @@ export function ensureProfiles(): ProfilesState {
   const brian = migrateBrianData();
   write(CATALOG_KEY, { machines: brian.machines });
   write(dataKey("brian"), { ...brian, machines: [] });
-  write(dataKey("kat"), { ...freshProfileData(), machines: [] });
+  write(dataKey("kat"), { ...freshProfileData(), machines: [], defaultLocationId: DEFAULT_LOCATION_KAT, activeLocationId: DEFAULT_LOCATION_KAT });
   const profiles: Profile[] = [
     { id: "brian", name: "Brian", createdAt: Date.now(), color: "#38bdf8" },
     { id: "kat", name: "Kat", createdAt: Date.now(), color: "#f472b6" },

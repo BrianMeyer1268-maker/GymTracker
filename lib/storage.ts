@@ -1,6 +1,7 @@
-import type { AppData, BodyCompEntry, Machine, Phase, WorkoutGoal } from "./types";
+import type { AppData, BodyCompEntry, GymLocation, Machine, Phase, WorkoutGoal } from "./types";
 import { GOALS, PHASES } from "./types";
 import { SEED_MACHINES } from "./catalog";
+import { seedLocations, DEFAULT_LOCATION_BRIAN } from "./gyms";
 import { todayISO } from "./date";
 import { allPhotos, restorePhotos } from "./photos";
 
@@ -26,12 +27,17 @@ export function seededDefault(): AppData {
     observations: [],
     switchEvents: [],
     today: undefined,
+    locations: seedLocations(),
+    defaultLocationId: DEFAULT_LOCATION_BRIAN,
+    activeLocationId: undefined,
+    favoriteLocationIds: [],
+    activityLogs: [],
   };
 }
 
 /** Default data for a *new* profile — no inherited body-comp / history. */
 export function freshProfileData(): AppData {
-  return { ...seededDefault(), bodyComp: [] };
+  return { ...seededDefault(), bodyComp: [], activityLogs: [] };
 }
 
 /** Normalize a stored machine: migrate legacy `photoId`, and drop the brand/series
@@ -101,6 +107,11 @@ export function migrate(raw: unknown): AppData {
     observations: Array.isArray(d.observations) ? d.observations.slice(-2000) : [],
     switchEvents: Array.isArray(d.switchEvents) ? d.switchEvents.slice(-1000) : [],
     today,
+    locations: Array.isArray(d.locations) && d.locations.length ? (d.locations as GymLocation[]) : seedLocations(),
+    defaultLocationId: d.defaultLocationId ?? DEFAULT_LOCATION_BRIAN,
+    activeLocationId: d.activeLocationId,
+    favoriteLocationIds: Array.isArray(d.favoriteLocationIds) ? d.favoriteLocationIds : [],
+    activityLogs: Array.isArray(d.activityLogs) ? d.activityLogs.slice(-2000) : [],
   };
 }
 

@@ -189,6 +189,92 @@ export interface DayPlan {
   crowd?: Crowd; // "how crowded is the gym" answer
 }
 
+// ---- Locations (gyms) & activities — universal Location + Activity system ----
+
+export type GymType = "machine" | "mixed" | "combat" | "class" | "free-weight" | "cardio" | "home" | "outdoor";
+
+/** How a location/gym profile was created. */
+export type LocationSource = "location" | "website" | "image" | "manual" | "ai-import";
+
+/** The 12 trackable activity types. */
+export type ActivityType =
+  | "machine-strength"
+  | "free-weights"
+  | "bodyweight"
+  | "kickboxing"
+  | "boxing"
+  | "bjj"
+  | "strength-conditioning"
+  | "run"
+  | "walk"
+  | "bike"
+  | "elliptical"
+  | "recovery";
+
+/** Which logging surface an activity routes to. */
+export type TrackerKind = "machine" | "free-weight" | "bodyweight" | "combat" | "cardio" | "recovery";
+
+export type ActivityIntensity = "easy" | "moderate" | "hard" | "brutal";
+export type SorenessLevel = "none" | "mild" | "moderate" | "high";
+
+/** A gym / place the user trains at — reusable & shareable across profiles. */
+export interface GymLocation {
+  id: string;
+  name: string;
+  nickname?: string;
+  address?: string;
+  website?: string;
+  type: GymType;
+  hours?: string;
+  activities: ActivityType[];
+  equipmentCatalog?: string[];
+  /** Optional ids into the shared machine catalog (machine gyms). */
+  machineCatalogIds?: string[];
+  cardioOptions?: string[];
+  freeWeightOptions?: string[];
+  classOptions?: string[];
+  confidence?: number;
+  needsReview?: boolean;
+  createdFrom?: LocationSource;
+  /** Confirmed gym coordinates only — never an ongoing GPS trail. */
+  lat?: number;
+  lng?: number;
+  notes?: string;
+}
+
+/** A logged non-machine session (free-weights / cardio / combat / bodyweight / recovery). */
+export interface ActivityLog {
+  id: string;
+  date: string; // YYYY-MM-DD (local)
+  at: number; // epoch ms
+  locationId: string;
+  locationName: string;
+  activity: ActivityType;
+  tracker: TrackerKind;
+  durationMin?: number;
+  intensity?: ActivityIntensity;
+  soreness?: SorenessLevel;
+  notes?: string;
+  heartRate?: number;
+  calories?: number;
+  // cardio
+  distance?: number;
+  pace?: string;
+  routeNotes?: string;
+  // combat / cardio sub-type (e.g. "Easy run", "Intervals")
+  subType?: string;
+  // combat
+  focuses?: string[];
+  sparring?: boolean;
+  rounds?: number;
+  roundLengthMin?: number;
+  // strength / free-weight / bodyweight
+  movements?: string[];
+  equipment?: string[];
+  exercises?: string[];
+  skillFocus?: string;
+}
+
 export interface AppData {
   version: number;
   phase: Phase;
@@ -200,6 +286,12 @@ export interface AppData {
   observations: AvailabilityObservation[];
   switchEvents: StationEvent[];
   today?: DayPlan;
+  // Universal Location + Activity system
+  locations: GymLocation[];
+  defaultLocationId?: string;
+  activeLocationId?: string;
+  favoriteLocationIds?: string[];
+  activityLogs: ActivityLog[];
 }
 
 export const PHASES: Phase[] = ["fat-loss", "recomp", "maintenance", "strength"];
@@ -208,3 +300,21 @@ export const GOALS: WorkoutGoal[] = ["push", "pull", "legs", "full-body", "condi
 export const LIFTING_GOALS: WorkoutGoal[] = ["push", "pull", "legs"];
 export const CROWD_OPTS: Crowd[] = ["empty", "light", "normal", "busy", "packed"];
 export const TIME_BUCKETS: TimeBucket[] = ["early-morning", "morning", "lunch", "afternoon", "evening", "late-night"];
+
+export const GYM_TYPES: GymType[] = ["machine", "mixed", "combat", "class", "free-weight", "cardio", "home", "outdoor"];
+export const ACTIVITY_TYPES: ActivityType[] = [
+  "machine-strength",
+  "free-weights",
+  "bodyweight",
+  "kickboxing",
+  "boxing",
+  "bjj",
+  "strength-conditioning",
+  "run",
+  "walk",
+  "bike",
+  "elliptical",
+  "recovery",
+];
+export const ACTIVITY_INTENSITIES: ActivityIntensity[] = ["easy", "moderate", "hard", "brutal"];
+export const SORENESS_LEVELS: SorenessLevel[] = ["none", "mild", "moderate", "high"];

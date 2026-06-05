@@ -63,6 +63,27 @@ export function parseFitdays(input: { images?: string[]; text?: string }): Promi
   return post<FitdaysParse>("/api/ai/parse-fitdays", input);
 }
 
+export interface GymImportResult {
+  name?: string | null;
+  address?: string | null;
+  website?: string | null;
+  type?: string | null;
+  hours?: string | null;
+  activities?: string[];
+  equipment?: string[];
+  cardio?: string[];
+  freeWeights?: string[];
+  classes?: string[];
+  machineCandidates?: { name: string; confidence?: number }[];
+  confidence?: number;
+  needsReview?: boolean;
+  urlFetchFailed?: boolean;
+}
+
+export function importGym(input: { url?: string; text?: string; notes?: string; images?: string[] }): Promise<GymImportResult> {
+  return post<GymImportResult>("/api/ai/import-gym", input);
+}
+
 export function classifyMachine(input: { images?: string[]; text?: string }): Promise<MachineClass> {
   return post<MachineClass>("/api/ai/classify-machine", input);
 }
