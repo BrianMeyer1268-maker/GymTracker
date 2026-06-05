@@ -109,6 +109,13 @@ export const SEED_LOCATIONS: GymLocation[] = [
     activities: ["machine-strength", "free-weights", "elliptical", "recovery"],
     createdFrom: "manual",
     notes: "Machine-based gym — uses the machine navigator.",
+    floors: [{ id: "f1440-main", name: "Main floor" }],
+    zones: [
+      { id: "f1440-machines", floorId: "f1440-main", name: "Selectorized machines", zoneType: "machines", landmark: "Center of the floor" },
+      { id: "f1440-cables", floorId: "f1440-main", name: "Cable & functional", zoneType: "cables", landmark: "Along the mirrored wall" },
+      { id: "f1440-free", floorId: "f1440-main", name: "Free weights & benches", zoneType: "free-weights", landmark: "Back-right, by the dumbbell rack" },
+      { id: "f1440-cardio", floorId: "f1440-main", name: "Cardio", zoneType: "cardio", landmark: "Front, by the windows" },
+    ],
   },
   {
     id: "corec",

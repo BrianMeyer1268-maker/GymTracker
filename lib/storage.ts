@@ -52,10 +52,28 @@ function normalizeMachine(m: Machine): Machine {
   return out;
 }
 
+const SEED_BY_ID = new Map(SEED_MACHINES.map((s) => [s.id, s]));
+
+/** Backfill new seed-derived fields (catalog image, default zone, exercises) onto a
+ *  stored machine without overriding the user's own edits. */
+function backfillSeed(m: Machine): Machine {
+  const s = SEED_BY_ID.get(m.id);
+  if (!s) return m;
+  return {
+    ...m,
+    catalogPhoto: m.catalogPhoto ?? s.catalogPhoto,
+    catalogPage: m.catalogPage ?? s.catalogPage,
+    catalogSource: m.catalogSource ?? s.catalogSource,
+    floorId: m.floorId ?? s.floorId,
+    zoneId: m.zoneId ?? s.zoneId,
+    exercises: m.exercises ?? s.exercises,
+  };
+}
+
 /** Keep the user's machines, but add any new seed machines they don't have yet. */
 export function mergeMachines(userMachines: unknown): Machine[] {
   if (!Array.isArray(userMachines) || userMachines.length === 0) return SEED_MACHINES.map((m) => normalizeMachine({ ...m }));
-  const merged = (userMachines as Machine[]).map(normalizeMachine);
+  const merged = (userMachines as Machine[]).map((m) => backfillSeed(normalizeMachine(m)));
   const have = new Set(merged.map((m) => m.id));
   for (const s of SEED_MACHINES) if (!have.has(s.id)) merged.push(normalizeMachine({ ...s }));
   return merged;
@@ -80,6 +98,16 @@ export function restoreSeeds(machines: Machine[]): Machine[] {
 /** True when at least one machine is usable (not archived). */
 export function hasActiveMachine(machines: Machine[]): boolean {
   return machines.some((m) => !m.archived);
+}
+
+/** Backfill seed floors/zones onto stored locations (by id) without overriding. */
+function backfillLocations(locations: GymLocation[]): GymLocation[] {
+  const seedById = new Map(seedLocations().map((l) => [l.id, l]));
+  return locations.map((l) => {
+    const s = seedById.get(l.id);
+    if (!s) return l;
+    return { ...l, floors: l.floors ?? s.floors, zones: l.zones ?? s.zones };
+  });
 }
 
 /** Validate / normalize a raw stored AppData blob. */
@@ -107,7 +135,7 @@ export function migrate(raw: unknown): AppData {
     observations: Array.isArray(d.observations) ? d.observations.slice(-2000) : [],
     switchEvents: Array.isArray(d.switchEvents) ? d.switchEvents.slice(-1000) : [],
     today,
-    locations: Array.isArray(d.locations) && d.locations.length ? (d.locations as GymLocation[]) : seedLocations(),
+    locations: Array.isArray(d.locations) && d.locations.length ? backfillLocations(d.locations as GymLocation[]) : seedLocations(),
     defaultLocationId: d.defaultLocationId ?? DEFAULT_LOCATION_BRIAN,
     activeLocationId: d.activeLocationId,
     favoriteLocationIds: Array.isArray(d.favoriteLocationIds) ? d.favoriteLocationIds : [],

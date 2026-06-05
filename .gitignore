@@ -33,3 +33,8 @@ secret.key
 # typescript
 *.tsbuildinfo
 next-env.d.ts.bak
+
+# source catalog PDFs — never commit / never expose as a download (only cropped
+# reference webp under public/catalog/ are committed). Drop PDFs in docs/ to import.
+/docs/*.pdf
+*.pdf

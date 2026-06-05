@@ -180,4 +180,5 @@ export const SWITCH_REASON_LABEL: Record<SwitchReason, string> = {
   pain: "pain",
   substitute: "switched",
   skipped: "skipped",
+  "not-here": "not here",
 };

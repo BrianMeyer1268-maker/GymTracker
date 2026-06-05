@@ -122,6 +122,50 @@ for (const machine of SEED_MACHINES) {
   if (machine.category === "cable-station") machine.exercises = [...CABLE_EXERCISES];
 }
 
+// Reference images cropped from the Matrix Strength Brochure 2021 (private/local
+// app assets — see public/catalog/matrix/LICENSE.txt). Real gym photos take priority.
+const CATALOG_PAGES: Record<string, number> = {
+  "matrix-versa-chest-press": 24,
+  "matrix-versa-pec-fly": 25,
+  "matrix-magnum-shoulder-press": 25,
+  "matrix-versa-lat-row": 26,
+  "matrix-versa-diverging-row": 26,
+  "matrix-versa-bicep-curl": 42,
+  "matrix-versa-triceps-press": 42,
+  "matrix-versa-leg-press": 44,
+  "matrix-versa-leg-extension": 44,
+  "matrix-versa-seated-leg-curl": 45,
+  "matrix-magnum-glute-trainer": 45,
+  "matrix-versa-ft": 55,
+  "matrix-aura-ft-300": 55,
+  "matrix-aura-ft-400": 55,
+  "matrix-magnum-crossover": 77,
+  "matrix-magnum-flat-bench": 97,
+  "matrix-aura-incline-bench": 97,
+};
+for (const machine of SEED_MACHINES) {
+  const page = CATALOG_PAGES[machine.id];
+  if (page) {
+    machine.catalogPhoto = `/catalog/matrix/${machine.id}.webp`;
+    machine.catalogPage = page;
+    machine.catalogSource = "matrix-strength-brochure-2021";
+  }
+}
+
+// Rough default placement at Fitness1440 (editable in "Map My Gym"). Gives every
+// machine a starting zone so the locator + active-workout location work day one.
+for (const machine of SEED_MACHINES) {
+  machine.floorId = "f1440-main";
+  machine.zoneId =
+    machine.category === "cable-station"
+      ? "f1440-cables"
+      : machine.equipment === "barbell" || machine.equipment === "smith"
+        ? "f1440-free"
+        : CATEGORY_GROUP[machine.category] === "cardio"
+          ? "f1440-cardio"
+          : "f1440-machines";
+}
+
 export function activeMachines(machines: Machine[]): Machine[] {
   return machines.filter((m) => !m.archived);
 }

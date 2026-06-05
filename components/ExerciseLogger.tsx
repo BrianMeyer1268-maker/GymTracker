@@ -49,7 +49,9 @@ export default function ExerciseLogger({
   onLeave: (reason: SwitchReason) => void;
   showToast: (m: string) => void;
 }) {
-  const { data, saveExercise, setGymPhoto } = useStore();
+  const { data, activeLocation, saveExercise, setGymPhoto, updateMachine } = useStore();
+  const zone = activeLocation?.zones?.find((z) => z.id === machine.zoneId);
+  const locationLine = [zone?.name, machine.locationNote, machine.landmarkNote || zone?.landmark].filter(Boolean).join(" · ");
   const pkey = progressionKey({ machineId: machine.id, exerciseId: exercise?.id, multiExercise: isMultiExercise(machine) });
   const last = lastLogForKey(data.logs, pkey);
   const rec = recommend(machine, last, data.phase, data.flagged.includes(machine.id));
@@ -149,6 +151,9 @@ export default function ExerciseLogger({
               Swap
             </button>
           </div>
+          <button className="tap min-h-[46px] w-full rounded-xl border border-warn/50 bg-warn/10 text-sm font-bold text-warn active:bg-warn/20" onClick={() => { updateMachine(machine.id, { locationNeedsReview: true }); onLeave("not-here"); }}>
+            📍 Can&apos;t find it — show substitutes
+          </button>
           <button className="tap min-h-[56px] w-full rounded-xl bg-accent text-lg font-extrabold text-accent-ink active:scale-[0.99]" onClick={save}>
             Save &amp; choose next →
           </button>
@@ -184,6 +189,14 @@ export default function ExerciseLogger({
         </button>
       ) : null}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ""; }} />
+
+      {locationLine ? (
+        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-[12px]">
+          <span aria-hidden>📍</span>
+          <span className="min-w-0 flex-1 truncate text-muted">{locationLine}</span>
+          {machine.locationNeedsReview ? <span className="chip bg-warn/15 text-warn">review</span> : null}
+        </div>
+      ) : null}
 
       {!last && !isCardio ? (
         <div className="mt-3 rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">

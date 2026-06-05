@@ -95,6 +95,21 @@ export interface Machine {
   /** For multi-exercise stations (cable / functional trainer): the exercises this
    *  machine supports — ids from the grouped exercise library (or custom names). */
   exercises?: string[];
+  // ---- Catalog reference image (local app asset; prefer a real gym photo) ----
+  catalogPhoto?: string; // e.g. /catalog/matrix/<id>.webp
+  catalogPage?: number;
+  catalogSource?: "matrix-strength-brochure-2021";
+  // ---- Where it lives on the gym floor ----
+  floorId?: string;
+  zoneId?: string;
+  mapX?: number; // 0..1 within a zone/map
+  mapY?: number;
+  locationNote?: string;
+  landmarkNote?: string;
+  nearbyMachineIds?: string[];
+  visualDescription?: string;
+  /** Set by "Can't find it" — location needs confirming. */
+  locationNeedsReview?: boolean;
 }
 
 /** Per-exercise time tracking for pace intelligence. */
@@ -166,7 +181,7 @@ export interface AvailabilityObservation {
   crowd?: Crowd;
 }
 
-export type SwitchReason = "busy" | "became-occupied" | "not-working" | "bad-fit" | "pain" | "substitute" | "skipped";
+export type SwitchReason = "busy" | "became-occupied" | "not-working" | "bad-fit" | "pain" | "substitute" | "skipped" | "not-here";
 
 /** Why the user left / switched away from a machine. */
 export interface StationEvent {
@@ -232,6 +247,45 @@ export type TrackerKind = "machine" | "free-weight" | "bodyweight" | "combat" | 
 export type ActivityIntensity = "easy" | "moderate" | "hard" | "brutal";
 export type SorenessLevel = "none" | "mild" | "moderate" | "high";
 
+// ---- Gym mapping (floors, zones, simple maps) ----
+export interface GymFloor {
+  id: string;
+  name: string;
+  notes?: string;
+}
+
+export type GymZoneType = "cardio" | "machines" | "free-weights" | "cables" | "turf" | "mobility" | "racks" | "classes" | "unknown";
+export const GYM_ZONE_TYPES: GymZoneType[] = ["machines", "free-weights", "cables", "racks", "cardio", "turf", "mobility", "classes", "unknown"];
+
+export interface GymZone {
+  id: string;
+  floorId?: string;
+  name: string;
+  description?: string;
+  landmark?: string;
+  zoneType: GymZoneType;
+}
+
+export type GymMapSource = "uploaded" | "drawn" | "ai" | "manual";
+export interface GymMapImage {
+  id: string;
+  floorId?: string;
+  image: string; // localStorage photo id or data url
+  source: GymMapSource;
+  notes?: string;
+}
+
+/** Where a machine sits in a gym (the proper per-gym mapping). */
+export interface MachinePlacement {
+  machineId: string;
+  floorId?: string;
+  zoneId?: string;
+  x?: number;
+  y?: number;
+  confidence?: "confirmed" | "likely" | "unknown";
+  note?: string;
+}
+
 /** A gym / place the user trains at — reusable & shareable across profiles. */
 export interface GymLocation {
   id: string;
@@ -255,6 +309,11 @@ export interface GymLocation {
   lat?: number;
   lng?: number;
   notes?: string;
+  // Floor map
+  floors?: GymFloor[];
+  zones?: GymZone[];
+  mapImages?: GymMapImage[];
+  placements?: MachinePlacement[];
 }
 
 /** A logged non-machine session (free-weights / cardio / combat / bodyweight / recovery). */

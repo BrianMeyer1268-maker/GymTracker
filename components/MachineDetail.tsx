@@ -23,14 +23,20 @@ const RATINGS: { value: MachineRating; label: string; selectedClass: string }[] 
 const inputCls = "min-h-[48px] w-full rounded-xl border border-line bg-surface2 px-3 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent";
 const lbl = "mb-1.5 block text-xs font-bold text-muted";
 
+const CATALOG_SOURCE_LABEL: Record<string, string> = { "matrix-strength-brochure-2021": "Matrix Strength Brochure 2021" };
+
 export default function MachineDetail({ machine, onClose, showToast }: { machine: Machine; onClose: () => void; showToast: (m: string) => void }) {
-  const { data, updateMachine, setGymPhoto, removeGymPhoto, setFlag, archiveMachine } = useStore();
+  const { data, activeLocation, updateMachine, setGymPhoto, removeGymPhoto, setFlag, archiveMachine } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const flagged = data.flagged.includes(machine.id);
   const lastUsed = lastLogFor(data.logs, machine.id)?.weight;
   const best = bestWeightFor(data.logs, machine.id);
   const hasGym = !!machine.gymPhotoId;
+  const zones = activeLocation?.zones ?? [];
 
+  const [zoneId, setZoneId] = useState(machine.zoneId ?? "");
+  const [locationNote, setLocationNote] = useState(machine.locationNote ?? "");
+  const [landmark, setLandmark] = useState(machine.landmarkNote ?? "");
   const [name, setName] = useState(machine.needsNaming ? "" : machine.name);
   const [exercises, setExercises] = useState<string[]>(machine.exercises ?? []);
   const [brand, setBrand] = useState(machine.brand ?? "");
@@ -88,6 +94,10 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
       primaryMuscles: primary.split(",").map((s) => s.trim()).filter(Boolean),
       secondaryMuscles: secondary.split(",").map((s) => s.trim()).filter(Boolean),
       exercises: exercises.length ? exercises : undefined,
+      zoneId: zoneId || undefined,
+      locationNote: u(locationNote),
+      landmarkNote: u(landmark),
+      locationNeedsReview: false,
     });
     showToast("Machine saved ✓");
     onClose();
@@ -122,6 +132,44 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
           )}
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ""; }} />
         </div>
+      </div>
+
+      {/* Catalog reference image */}
+      {machine.catalogPhoto ? (
+        <div className="mt-3 rounded-xl border border-line bg-surface2 p-3">
+          <div className="flex items-center gap-3">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-line bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={machine.catalogPhoto} alt="" className="h-full w-full object-contain" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-bold uppercase tracking-wide text-faint">Catalog reference</div>
+              <div className="text-sm font-semibold">{CATALOG_SOURCE_LABEL[machine.catalogSource ?? ""] ?? "Catalog"}{machine.catalogPage ? ` · p${machine.catalogPage}` : ""}</div>
+              <div className="text-[11px] text-faint">Reference image — take a gym photo to replace it.</div>
+            </div>
+          </div>
+          {machine.confidence !== "confirmed" ? (
+            <button className="mt-2 min-h-[40px] w-full rounded-lg border border-accent/50 bg-accent/10 text-sm font-bold text-accent active:scale-95" onClick={() => { updateMachine(machine.id, { confidence: "confirmed" }); showToast("Match confirmed ✓"); }}>
+              👍 Looks like this? Confirm match
+            </button>
+          ) : (
+            <div className="mt-2 text-center text-xs font-semibold text-good">✓ Confirmed match</div>
+          )}
+        </div>
+      ) : null}
+
+      {/* Location on the gym floor */}
+      <div className="mt-3 rounded-xl border border-line bg-surface2 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-faint">📍 Location{activeLocation ? ` · ${activeLocation.nickname || activeLocation.name}` : ""}</span>
+          {machine.locationNeedsReview ? <span className="chip bg-warn/15 text-warn">needs review</span> : null}
+        </div>
+        <select className={inputCls} value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+          <option value="">— pick a zone —</option>
+          {zones.map((z) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+        </select>
+        <input className={`${inputCls} mt-2`} value={locationNote} placeholder="Where exactly? e.g. 3rd row, left side" onChange={(e) => setLocationNote(e.target.value)} />
+        <input className={`${inputCls} mt-2`} value={landmark} placeholder="Landmark — e.g. next to the water fountain" onChange={(e) => setLandmark(e.target.value)} />
       </div>
 
       {/* Rating + trainer */}

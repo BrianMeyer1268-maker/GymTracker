@@ -1,0 +1,15 @@
+Matrix catalog reference images
+================================
+
+The .webp images in this folder are per-machine crops from the publicly distributed
+Matrix Strength Brochure 2021, used ONLY as private, local reference thumbnails inside
+this personal, access-gated app to help identify unlabeled machines on the gym floor.
+
+- These images are NOT app-owned content. All product images/designs are © Matrix /
+  Johnson Health Tech.
+- They are used here for personal identification/reference only, not redistribution.
+- The app prefers a real photo you take of the actual machine; the catalog image is
+  only shown as a fallback until a gym photo exists.
+- The source PDF is not committed and is not exposed as a download from the app.
+
+Regenerate with scripts/importMatrixCatalogImages.ts (see that file for instructions).

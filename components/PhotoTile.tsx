@@ -27,6 +27,16 @@ export default function PhotoTile({ machine, className = "" }: { machine: Machin
     return <img src={gym} alt={machine.name} className={`h-full w-full object-cover ${className}`} />;
   }
 
+  // Catalog reference image (product shot on white) — shown until a real gym photo exists.
+  if (machine.catalogPhoto) {
+    return (
+      <div className={`h-full w-full bg-white ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={machine.catalogPhoto} alt={machine.name} className="h-full w-full object-contain" />
+      </div>
+    );
+  }
+
   const group = CATEGORY_GROUP[machine.category];
   return (
     <div className={`flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br ${GROUP_BG[group]} ${className}`}>
