@@ -111,10 +111,14 @@ export const SEED_LOCATIONS: GymLocation[] = [
     notes: "Machine-based gym — uses the machine navigator.",
     floors: [{ id: "f1440-main", name: "Main floor" }],
     zones: [
-      { id: "f1440-machines", floorId: "f1440-main", name: "Selectorized machines", zoneType: "machines", landmark: "Center of the floor" },
-      { id: "f1440-cables", floorId: "f1440-main", name: "Cable & functional", zoneType: "cables", landmark: "Along the mirrored wall" },
-      { id: "f1440-free", floorId: "f1440-main", name: "Free weights & benches", zoneType: "free-weights", landmark: "Back-right, by the dumbbell rack" },
-      { id: "f1440-cardio", floorId: "f1440-main", name: "Cardio", zoneType: "cardio", landmark: "Front, by the windows" },
+      { id: "f1440-cardio", floorId: "f1440-main", name: "Cardio row", zoneType: "cardio", landmark: "Front, by the windows" },
+      { id: "f1440-machines", floorId: "f1440-main", name: "Selectorized machines", zoneType: "machines", landmark: "Center rows near the mirrors" },
+      { id: "f1440-plate", floorId: "f1440-main", name: "Plate-loaded machines", zoneType: "machines", landmark: "Left side" },
+      { id: "f1440-cables", floorId: "f1440-main", name: "Cable stations", zoneType: "cables", landmark: "Along the mirrored wall" },
+      { id: "f1440-free", floorId: "f1440-main", name: "Dumbbells / free weights", zoneType: "free-weights", landmark: "Back-right, by the dumbbell rack" },
+      { id: "f1440-racks", floorId: "f1440-main", name: "Racks / Smith machines", zoneType: "racks", landmark: "Back wall" },
+      { id: "f1440-turf", floorId: "f1440-main", name: "Turf", zoneType: "turf", landmark: "Far corner" },
+      { id: "f1440-mobility", floorId: "f1440-main", name: "Mobility / stretch", zoneType: "mobility", landmark: "Quiet corner by the mats" },
     ],
   },
   {

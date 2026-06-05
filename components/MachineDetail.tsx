@@ -37,6 +37,8 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
   const [zoneId, setZoneId] = useState(machine.zoneId ?? "");
   const [locationNote, setLocationNote] = useState(machine.locationNote ?? "");
   const [landmark, setLandmark] = useState(machine.landmarkNote ?? "");
+  const [nearby, setNearby] = useState<string[]>(machine.nearbyMachineIds ?? []);
+  const sameZone = data.machines.filter((m) => !m.archived && m.id !== machine.id && m.zoneId && m.zoneId === zoneId).slice(0, 12);
   const [name, setName] = useState(machine.needsNaming ? "" : machine.name);
   const [exercises, setExercises] = useState<string[]>(machine.exercises ?? []);
   const [brand, setBrand] = useState(machine.brand ?? "");
@@ -97,6 +99,7 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
       zoneId: zoneId || undefined,
       locationNote: u(locationNote),
       landmarkNote: u(landmark),
+      nearbyMachineIds: nearby.length ? nearby : undefined,
       locationNeedsReview: false,
     });
     showToast("Machine saved ✓");
@@ -170,6 +173,21 @@ export default function MachineDetail({ machine, onClose, showToast }: { machine
         </select>
         <input className={`${inputCls} mt-2`} value={locationNote} placeholder="Where exactly? e.g. 3rd row, left side" onChange={(e) => setLocationNote(e.target.value)} />
         <input className={`${inputCls} mt-2`} value={landmark} placeholder="Landmark — e.g. next to the water fountain" onChange={(e) => setLandmark(e.target.value)} />
+        {sameZone.length ? (
+          <div className="mt-2">
+            <div className="mb-1 text-[11px] font-bold text-faint">Nearby machines (same zone)</div>
+            <div className="flex flex-wrap gap-1.5">
+              {sameZone.map((m) => {
+                const on = nearby.includes(m.id);
+                return (
+                  <button key={m.id} onClick={() => setNearby((p) => (p.includes(m.id) ? p.filter((x) => x !== m.id) : [...p, m.id]))} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${on ? "border-accent bg-accent/15 text-accent" : "border-line bg-surface text-muted"}`}>
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Rating + trainer */}

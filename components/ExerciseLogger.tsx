@@ -40,6 +40,7 @@ export default function ExerciseLogger({
   goal,
   onClose,
   onLeave,
+  onShowMap,
   showToast,
 }: {
   machine: Machine;
@@ -47,11 +48,19 @@ export default function ExerciseLogger({
   goal: WorkoutGoal;
   onClose: () => void;
   onLeave: (reason: SwitchReason) => void;
+  onShowMap?: () => void;
   showToast: (m: string) => void;
 }) {
   const { data, activeLocation, saveExercise, setGymPhoto, updateMachine } = useStore();
   const zone = activeLocation?.zones?.find((z) => z.id === machine.zoneId);
   const locationLine = [zone?.name, machine.locationNote, machine.landmarkNote || zone?.landmark].filter(Boolean).join(" · ");
+  const nearbyNames = (machine.nearbyMachineIds?.length
+    ? machine.nearbyMachineIds
+    : data.machines.filter((m) => !m.archived && m.id !== machine.id && m.zoneId && m.zoneId === machine.zoneId).slice(0, 4).map((m) => m.id)
+  )
+    .map((id) => data.machines.find((m) => m.id === id)?.name)
+    .filter((n): n is string => !!n)
+    .slice(0, 4);
   const pkey = progressionKey({ machineId: machine.id, exerciseId: exercise?.id, multiExercise: isMultiExercise(machine) });
   const last = lastLogForKey(data.logs, pkey);
   const rec = recommend(machine, last, data.phase, data.flagged.includes(machine.id));
@@ -190,11 +199,17 @@ export default function ExerciseLogger({
       ) : null}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ""; }} />
 
-      {locationLine ? (
-        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-[12px]">
-          <span aria-hidden>📍</span>
-          <span className="min-w-0 flex-1 truncate text-muted">{locationLine}</span>
-          {machine.locationNeedsReview ? <span className="chip bg-warn/15 text-warn">review</span> : null}
+      {locationLine || nearbyNames.length || onShowMap ? (
+        <div className="mt-2 rounded-lg border border-line bg-surface2 px-2.5 py-2 text-[12px]">
+          {locationLine ? (
+            <div className="flex items-center gap-1.5">
+              <span aria-hidden>📍</span>
+              <span className="min-w-0 flex-1 truncate text-muted">{locationLine}</span>
+              {machine.locationNeedsReview ? <span className="chip bg-warn/15 text-warn">review</span> : null}
+            </div>
+          ) : null}
+          {nearbyNames.length ? <div className="mt-1 truncate text-[11px] text-faint">Nearby: {nearbyNames.join(", ")}</div> : null}
+          {onShowMap ? <button onClick={onShowMap} className="mt-1.5 w-full rounded-lg border border-accent/40 bg-accent/10 py-1.5 text-[12px] font-bold text-accent active:bg-accent/15">🗺️ Show on map</button> : null}
         </div>
       ) : null}
 

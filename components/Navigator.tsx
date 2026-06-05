@@ -11,6 +11,7 @@ import { smartSuggestion, explainPick, nowCtx, type PickExplanation } from "@/li
 import MachineCard from "./MachineCard";
 import ExerciseLogger from "./ExerciseLogger";
 import ExerciseChooser from "./ExerciseChooser";
+import GymMap from "./GymMap";
 import WorkoutSummary from "./WorkoutSummary";
 
 const GOAL_BAR: Record<WorkoutGoal, string> = {
@@ -28,6 +29,8 @@ export default function Navigator({ showToast }: { showToast: (m: string) => voi
   const [showSubs, setShowSubs] = useState(false);
   const [ending, setEnding] = useState(false);
   const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [leftZoneId, setLeftZoneId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoTarget = useRef<string | null>(null);
 
@@ -44,6 +47,8 @@ export default function Navigator({ showToast }: { showToast: (m: string) => voi
 
   function leave(reason: SwitchReason) {
     const id = data.today?.activeMachineId;
+    const m = id ? findMachine(data.machines, id) : undefined;
+    setLeftZoneId(m?.zoneId ?? null);
     if (id) recordSwitch(id, reason);
     else setActiveMachine(undefined);
     setShowSubs(true);
@@ -71,7 +76,9 @@ export default function Navigator({ showToast }: { showToast: (m: string) => voi
 
   const current = plan.current;
   const primary = current ? slotMachines(data, current) : [];
-  const subs = current ? slotSubstitutes(data, current) : [];
+  const rawSubs = current ? slotSubstitutes(data, current) : [];
+  // After "Can't find it", float substitutes in the same zone (nearby) to the top.
+  const subs = leftZoneId ? [...rawSubs].sort((a, b) => (b.machine.zoneId === leftZoneId ? 1 : 0) - (a.machine.zoneId === leftZoneId ? 1 : 0)) : rawSubs;
   const noneAvailable = primary.length === 0 || primary.every((r) => r.busy || r.usedToday);
 
   const ctx = nowCtx();
@@ -187,9 +194,11 @@ export default function Navigator({ showToast }: { showToast: (m: string) => voi
         isMultiExercise(active) && !picked ? (
           <ExerciseChooser machine={active} onPick={setPicked} onClose={() => setActiveMachine(undefined)} />
         ) : (
-          <ExerciseLogger key={`${active.id}-${picked?.id ?? "solo"}`} machine={active} exercise={picked ?? undefined} goal={goal} onClose={() => setActiveMachine(undefined)} onLeave={leave} showToast={showToast} />
+          <ExerciseLogger key={`${active.id}-${picked?.id ?? "solo"}`} machine={active} exercise={picked ?? undefined} goal={goal} onClose={() => setActiveMachine(undefined)} onLeave={leave} onShowMap={() => setMapOpen(true)} showToast={showToast} />
         )
       ) : null}
+
+      {mapOpen ? <GymMap onClose={() => setMapOpen(false)} showToast={showToast} focusMachineId={active?.id} /> : null}
 
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhotoFile(f); e.target.value = ""; }} />
     </div>

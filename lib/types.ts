@@ -275,6 +275,16 @@ export interface GymMapImage {
   notes?: string;
 }
 
+/** A wide "area" photo of a zone — helps you recognize the spot on the floor. */
+export interface ZonePhoto {
+  id: string;
+  gymId?: string;
+  floorId?: string;
+  zoneId: string;
+  image: string; // localStorage photo id
+  note?: string;
+}
+
 /** Where a machine sits in a gym (the proper per-gym mapping). */
 export interface MachinePlacement {
   machineId: string;
@@ -314,6 +324,7 @@ export interface GymLocation {
   zones?: GymZone[];
   mapImages?: GymMapImage[];
   placements?: MachinePlacement[];
+  zonePhotos?: ZonePhoto[];
 }
 
 /** A logged non-machine session (free-weights / cardio / combat / bodyweight / recovery). */

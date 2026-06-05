@@ -159,11 +159,15 @@ for (const machine of SEED_MACHINES) {
   machine.zoneId =
     machine.category === "cable-station"
       ? "f1440-cables"
-      : machine.equipment === "barbell" || machine.equipment === "smith"
-        ? "f1440-free"
-        : CATEGORY_GROUP[machine.category] === "cardio"
-          ? "f1440-cardio"
-          : "f1440-machines";
+      : machine.equipment === "smith" || machine.equipment === "barbell"
+        ? "f1440-racks"
+        : machine.equipment === "dumbbell"
+          ? "f1440-free"
+          : machine.category === "mobility"
+            ? "f1440-mobility"
+            : CATEGORY_GROUP[machine.category] === "cardio"
+              ? "f1440-cardio"
+              : "f1440-machines";
 }
 
 export function activeMachines(machines: Machine[]): Machine[] {
