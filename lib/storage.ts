@@ -49,6 +49,27 @@ export function mergeMachines(userMachines: unknown): Machine[] {
   return merged;
 }
 
+/**
+ * Restore the default machine catalog without clobbering user data: re-add any
+ * missing seed machines and un-archive seed machines, while preserving photos,
+ * ratings, custom machines, etc. Used by the "Restore default machines" action
+ * and as an auto-heal when a profile somehow ends up with no usable machines.
+ */
+export function restoreSeeds(machines: Machine[]): Machine[] {
+  const byId = new Map<string, Machine>(machines.map((m) => [m.id, m]));
+  for (const s of SEED_MACHINES) {
+    const ex = byId.get(s.id);
+    if (!ex) byId.set(s.id, { ...s });
+    else if (ex.archived) byId.set(s.id, { ...ex, archived: false });
+  }
+  return Array.from(byId.values());
+}
+
+/** True when at least one machine is usable (not archived). */
+export function hasActiveMachine(machines: Machine[]): boolean {
+  return machines.some((m) => !m.archived);
+}
+
 /** Validate / normalize a raw stored AppData blob. */
 export function migrate(raw: unknown): AppData {
   const base = freshProfileData();

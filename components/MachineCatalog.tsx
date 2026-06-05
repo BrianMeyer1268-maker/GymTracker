@@ -26,7 +26,7 @@ const VIEWS: { id: CatalogView; label: string }[] = [
 ];
 
 export default function MachineCatalog({ showToast }: { showToast: (m: string) => void }) {
-  const { data, addMachine, setGymPhoto } = useStore();
+  const { data, addMachine, setGymPhoto, restoreDefaultMachines } = useStore();
   const [view, setView] = useState<CatalogView>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
@@ -56,6 +56,12 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
   function openPhoto(id: string) {
     photoTarget.current = id;
     fileRef.current?.click();
+  }
+
+  function restore() {
+    restoreDefaultMachines();
+    setView("all");
+    showToast("Default machines restored ✓");
   }
 
   async function onFile(file: File) {
@@ -114,8 +120,13 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
 
       {/* Grid */}
       {list.length === 0 ? (
-        <div className="card p-8 text-center text-sm text-faint">
-          {view === "needs-naming" ? "Nothing needs naming. 🎉" : view === "needs-photo" ? "Every machine has a gym photo. 📸" : "No machines here yet."}
+        <div className="card flex flex-col items-center gap-3 p-8 text-center text-sm text-faint">
+          <span>{view === "needs-naming" ? "Nothing needs naming. 🎉" : view === "needs-photo" ? "Every machine has a gym photo. 📸" : "No machines here yet."}</span>
+          {view !== "needs-naming" && view !== "needs-photo" ? (
+            <button onClick={restore} className="min-h-[44px] rounded-xl bg-accent px-5 text-sm font-bold text-accent-ink active:scale-95">
+              Restore default machines
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
@@ -161,6 +172,12 @@ export default function MachineCatalog({ showToast }: { showToast: (m: string) =
           })}
         </div>
       )}
+
+      {data.machines.length > 0 ? (
+        <button onClick={restore} className="mx-auto mt-1 text-xs font-semibold text-faint active:text-muted">
+          ↺ Restore default machines
+        </button>
+      ) : null}
 
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
 

@@ -1,12 +1,30 @@
 import type { AppData, Machine } from "./types";
 import { PHASES } from "./types";
-import { seededDefault, freshProfileData, migrate, mergeMachines, uid } from "./storage";
+import { seededDefault, freshProfileData, migrate, mergeMachines, restoreSeeds, hasActiveMachine, uid } from "./storage";
 
 export interface Profile {
   id: string;
   name: string;
   createdAt: number;
   color: string;
+  /** Soft per-profile lock: salted hash of a 4-digit PIN. Absent = no lock. */
+  pinHash?: string;
+}
+
+/**
+ * Lightweight, synchronous salted hash for the per-profile PIN. This is a *soft*
+ * privacy lock between trusted co-users sharing a device — not real cryptography
+ * (a 4-digit space is brute-forceable). It just keeps the PIN out of plain sight
+ * in localStorage so one person can't casually open another's workouts.
+ */
+export function hashPin(pin: string, salt: string): string {
+  let h = 2166136261;
+  const s = `${salt}:${pin}`;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
 }
 
 export interface ProfilesState {
@@ -102,11 +120,14 @@ export function persistState(state: ProfilesState): void {
 export function loadProfileData(id: string, shareCatalog: boolean): AppData {
   const blob = read(dataKey(id));
   const base = blob ? migrate(blob) : freshProfileData();
+  let machines = base.machines;
   if (shareCatalog) {
     const cat = read(CATALOG_KEY);
-    return { ...base, machines: mergeMachines(cat?.machines) };
+    machines = mergeMachines(cat?.machines);
   }
-  return base;
+  // Auto-heal: never present an empty catalog — refill the seed machines.
+  if (!hasActiveMachine(machines)) machines = restoreSeeds(machines);
+  return { ...base, machines };
 }
 
 export function saveProfileData(id: string, data: AppData, shareCatalog: boolean): void {

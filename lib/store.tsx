@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { AppData, AvailabilityObservation, BodyCompEntry, Crowd, DayPlan, ExerciseLog, Machine, Phase, Readiness, StationEvent, SwitchReason, WorkoutGoal, WorkoutSession } from "./types";
-import { seededDefault, uid, applyImport } from "./storage";
-import { ensureProfiles, loadProfileData, saveProfileData, persistState, makeProfile, initNewProfileData, deleteProfileData, applyShareToggle, type Profile } from "./profiles";
+import { seededDefault, uid, applyImport, restoreSeeds } from "./storage";
+import { ensureProfiles, loadProfileData, saveProfileData, persistState, makeProfile, initNewProfileData, deleteProfileData, applyShareToggle, hashPin, type Profile } from "./profiles";
 import { setPhoto, deletePhoto, uidPhoto } from "./photos";
 import { todayISO, timeBucket } from "./date";
 
@@ -23,6 +23,8 @@ interface Store {
   renameProfile: (id: string, name: string) => void;
   deleteProfile: (id: string) => void;
   setShareCatalog: (on: boolean) => void;
+  setProfilePin: (id: string, pin: string | null) => void;
+  verifyPin: (id: string, pin: string) => boolean;
   // workout / data
   setPhase: (p: Phase) => void;
   setReadiness: (r: Readiness) => void;
@@ -40,6 +42,7 @@ interface Store {
   addMachine: (m: Machine) => void;
   updateMachine: (id: string, patch: Partial<Machine>) => void;
   archiveMachine: (id: string) => void;
+  restoreDefaultMachines: () => void;
   setGymPhoto: (id: string, dataUrl: string) => void;
   removeGymPhoto: (id: string) => void;
   setFlag: (machineId: string, on: boolean) => void;
@@ -158,6 +161,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         persistState({ profiles, activeId: activeRef.current, shareCatalog: on });
         setData(loadProfileData(activeRef.current, on));
       },
+      setProfilePin: (id, pin) => {
+        const pinHash = pin && pin.trim() ? hashPin(pin.trim(), id) : undefined;
+        const next = profiles.map((p) => (p.id === id ? { ...p, pinHash } : p));
+        setProfiles(next);
+        persistState({ profiles: next, activeId: activeRef.current, shareCatalog });
+      },
+      verifyPin: (id, pin) => {
+        const p = profiles.find((x) => x.id === id);
+        return !p?.pinHash || hashPin(pin, id) === p.pinHash;
+      },
 
       setPhase: (p) => setData((d) => ({ ...d, phase: p })),
       setReadiness: (r) => patchToday((t) => ({ ...t, readiness: r })),
@@ -261,6 +274,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addMachine: (m) => setData((d) => ({ ...d, machines: [...d.machines, m] })),
       updateMachine: (id, patch) => setData((d) => ({ ...d, machines: d.machines.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
       archiveMachine: (id) => setData((d) => ({ ...d, machines: d.machines.map((m) => (m.id === id ? { ...m, archived: true } : m)) })),
+      restoreDefaultMachines: () => setData((d) => ({ ...d, machines: restoreSeeds(d.machines) })),
       setGymPhoto: (id, dataUrl) => {
         const old = data.machines.find((m) => m.id === id)?.gymPhotoId;
         const pid = uidPhoto();
