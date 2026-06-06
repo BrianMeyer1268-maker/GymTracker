@@ -38,3 +38,6 @@ next-env.d.ts.bak
 # reference webp under public/catalog/ are committed). Drop PDFs in docs/ to import.
 /docs/*.pdf
 *.pdf
+
+# raw extracted catalog images (source) — only the optimized webp in public/ are committed
+/gym pics/

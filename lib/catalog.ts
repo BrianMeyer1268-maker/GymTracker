@@ -142,6 +142,10 @@ const CATALOG_PAGES: Record<string, number> = {
   "matrix-magnum-crossover": 77,
   "matrix-magnum-flat-bench": 97,
   "matrix-aura-incline-bench": 97,
+  "matrix-magnum-preacher-curl": 102,
+  "matrix-magnum-vkr-chin": 102,
+  "matrix-back-extension": 104,
+  "matrix-reverse-back-extension": 104,
 };
 for (const machine of SEED_MACHINES) {
   const page = CATALOG_PAGES[machine.id];

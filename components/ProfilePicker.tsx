@@ -93,7 +93,10 @@ export default function ProfilePicker({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col items-center justify-center gap-6 px-6 py-10">
+    <div
+      className="mx-auto flex min-h-[100dvh] max-w-app flex-col items-center justify-center gap-6 bg-cover bg-center px-6 py-10"
+      style={{ backgroundImage: "linear-gradient(rgba(10,12,16,0.86), rgba(10,12,16,0.94)), url(/img/bg-stretch.webp)" }}
+    >
       <div className="text-center">
         <div className="text-[11px] font-bold uppercase tracking-[0.3em] text-faint">Iron Compass</div>
         <h1 className="mt-1 text-2xl font-extrabold">Who&apos;s training?</h1>
