@@ -142,10 +142,31 @@ const CATALOG_PAGES: Record<string, number> = {
   "matrix-magnum-crossover": 77,
   "matrix-magnum-flat-bench": 97,
   "matrix-aura-incline-bench": 97,
+  "matrix-magnum-multi-bench": 100,
   "matrix-magnum-preacher-curl": 102,
   "matrix-magnum-vkr-chin": 102,
   "matrix-back-extension": 104,
-  "matrix-reverse-back-extension": 104,
+  "matrix-magnum-incline-bench": 110,
+  "matrix-magnum-supine-bench": 110,
+  "matrix-magnum-seated-row": 111,
+  "matrix-magnum-leg-press": 113,
+  "matrix-magnum-hack-squat": 113,
+  "matrix-magnum-squat-lunge": 113,
+  "matrix-reverse-back-extension": 114,
+  "matrix-varsity-smith": 132,
+  "matrix-magnum-smith": 132,
+  "matrix-varsity-perfect-squat": 132,
+};
+// Cardio isn't in the Matrix Strength brochure — these use the Life Fitness
+// Product Catalog 2021 as a stand-in reference (real gym photos still win).
+const CATALOG_PAGES_LF: Record<string, number> = {
+  "matrix-treadmill": 11,
+  "matrix-s-drive": 11,
+  "matrix-s-force": 11,
+  "matrix-elliptical": 11,
+  "matrix-upright-cycle": 11,
+  "matrix-cxc-cycle": 11,
+  "matrix-total-body-cycle": 11,
 };
 for (const machine of SEED_MACHINES) {
   const page = CATALOG_PAGES[machine.id];
@@ -153,6 +174,13 @@ for (const machine of SEED_MACHINES) {
     machine.catalogPhoto = `/catalog/matrix/${machine.id}.webp`;
     machine.catalogPage = page;
     machine.catalogSource = "matrix-strength-brochure-2021";
+    continue;
+  }
+  const lfPage = CATALOG_PAGES_LF[machine.id];
+  if (lfPage) {
+    machine.catalogPhoto = `/catalog/lifefitness/${machine.id}.webp`;
+    machine.catalogPage = lfPage;
+    machine.catalogSource = "life-fitness-product-catalog-2021";
   }
 }
 

@@ -98,7 +98,7 @@ export interface Machine {
   // ---- Catalog reference image (local app asset; prefer a real gym photo) ----
   catalogPhoto?: string; // e.g. /catalog/matrix/<id>.webp
   catalogPage?: number;
-  catalogSource?: "matrix-strength-brochure-2021";
+  catalogSource?: "matrix-strength-brochure-2021" | "life-fitness-product-catalog-2021";
   // ---- Where it lives on the gym floor ----
   floorId?: string;
   zoneId?: string;

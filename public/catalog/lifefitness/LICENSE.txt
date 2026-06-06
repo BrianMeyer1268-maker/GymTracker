@@ -1,0 +1,19 @@
+Life Fitness catalog reference images
+=====================================
+
+The .webp images in this folder are per-machine product shots extracted from the
+publicly distributed Life Fitness Product Catalog 2021, used ONLY as private, local
+reference thumbnails inside this personal, access-gated app.
+
+They stand in for the gym's cardio machines (treadmill, elliptical, bikes), which the
+Matrix Strength Brochure does not cover. The named machine is a Matrix model; the
+reference image is the equivalent Life Fitness machine type, shown only until a real
+gym photo is taken.
+
+- These images are NOT app-owned content. All product images/designs are © Life Fitness.
+- Used here for personal identification/reference only, not redistribution.
+- The app prefers a real photo you take of the actual machine; the catalog image is
+  only a fallback until a gym photo exists.
+- The source PDF is not committed and is not exposed as a download from the app.
+
+Regenerate with scripts/importExtractedImages.ts (see that file for instructions).

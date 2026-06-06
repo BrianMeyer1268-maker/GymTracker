@@ -23,7 +23,7 @@ const RATINGS: { value: MachineRating; label: string; selectedClass: string }[] 
 const inputCls = "min-h-[48px] w-full rounded-xl border border-line bg-surface2 px-3 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent";
 const lbl = "mb-1.5 block text-xs font-bold text-muted";
 
-const CATALOG_SOURCE_LABEL: Record<string, string> = { "matrix-strength-brochure-2021": "Matrix Strength Brochure 2021" };
+const CATALOG_SOURCE_LABEL: Record<string, string> = { "matrix-strength-brochure-2021": "Matrix Strength Brochure 2021", "life-fitness-product-catalog-2021": "Life Fitness Catalog 2021 (reference)" };
 
 export default function MachineDetail({ machine, onClose, showToast }: { machine: Machine; onClose: () => void; showToast: (m: string) => void }) {
   const { data, activeLocation, updateMachine, setGymPhoto, removeGymPhoto, setFlag, archiveMachine } = useStore();
